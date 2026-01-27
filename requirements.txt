@@ -3,3 +3,6 @@ pillow
 opencv-python
 pdfplumber
 PyMuPDF
+flask
+flask-cors
+cffi

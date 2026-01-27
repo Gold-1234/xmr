@@ -29,9 +29,27 @@ function AppContent() {
 
   // File upload handler
   const handleFileUpload = async (file: File) => {
-    // For dev-mode, we mock file upload
-    const fileUrl = URL.createObjectURL(file); // show local preview
-    const tests = ['CBC', 'CRP', 'Blood Sugar']; // dummy tests
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('http://127.0.0.1:5001/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+
+    const data = await response.json();
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    // Assume result has fileUrl and tests, but backend returns { result: analysis }
+    // For now, mock fileUrl and extract tests from result
+    const fileUrl = URL.createObjectURL(file); // or from backend if provided
+    const tests = data.result.tests || ['CBC', 'Blood Sugar']; // adjust based on backend response
     return { fileUrl, tests };
   };
 
