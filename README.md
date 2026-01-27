@@ -9,7 +9,7 @@ This project consists of two main components:
 ### Backend (Python Flask)
 - **OCR Processing**: Uses Tesseract OCR with OpenCV preprocessing for image analysis
 - **PDF Processing**: Extracts text from PDF documents using pdfplumber and PyMuPDF
-- **Medical Analysis**: Analyzes blood test results against reference ranges
+- **AI Analysis**: Uses Google Gemini AI to extract structured medical data and generate explanations
 - **REST API**: Provides endpoints for file upload and analysis
 
 ### Frontend (React + TypeScript)
@@ -172,24 +172,32 @@ npm run dev
 
 ### Environment Variables
 
+Create `.env` in the root directory for backend:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
 Create `.env.local` in the frontend directory:
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-## 📊 Supported Medical Tests
+### Gemini AI Setup
 
-The system currently analyzes:
-- **Hemoglobin** (g/dL)
-- **Glucose** (mg/dL)
-- **Cholesterol** (mg/dL)
+1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Create a new API key
+3. Add it to your `.env` file as `GEMINI_API_KEY`
 
-Each test includes:
-- Value extraction from documents
-- Comparison against reference ranges
-- Deviation analysis (high/low indicators)
-- Medical interpretation and recommendations
+## 📊 AI-Powered Analysis
+
+The system uses Google Gemini AI to automatically:
+- Extract patient information (name, age, gender)
+- Identify and parse all medical test results from documents
+- Determine normal/high/low interpretations based on reference ranges
+- Generate clear explanations for each test result
+
+The AI can handle any blood test, diagnostic report, or medical document, automatically adapting to different formats and test types.
 
 ## 🔒 Security Features
 

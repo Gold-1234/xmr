@@ -1,38 +1,58 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import LoginPage from './components/LoginPage';
-import OTPVerification from './components/OTPVerification';
 import Dashboard from './components/Dashboard';
+import ReportsPage from './components/ReportsPage';
+import ReportDetail from './components/ReportDetail';
+import TrendChart from './components/TrendChart';
+
+type Page = 'login' | 'otp' | 'dashboard' | 'reports' | 'report-detail' | 'trends';
 
 function AppContent() {
-  const { user, login } = useAuth();
-  const [step, setStep] = useState<'login' | 'otp' | 'dashboard'>('login');
-  const [tempEmail, setTempEmail] = useState('');
-  const [displayedOtp, setDisplayedOtp] = useState('123456'); // fixed OTP for dev
+  const { user, login, isAuthenticated } = useAuth();
+  const [currentPage, setCurrentPage] = useState<Page>('dashboard'); // Start directly on dashboard
+  const [selectedTest, setSelectedTest] = useState<string>('');
+  const [selectedReportId, setSelectedReportId] = useState<string>('');
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-  // Login handler: just moves to OTP step
-  const handleLogin = async (email: string, password: string) => {
-    // In dev-mode, we skip real API call
-    setTempEmail(email);
-    setDisplayedOtp('123456');
-    setStep('otp');
-  };
+  // Auto-login with test user on app load
+  useEffect(() => {
+    if (!isAuthenticated) {
+      // Auto-login with test user
+      login({
+        id: '4f6aedf0-2ecd-4ff8-bbd7-ef08743a8f23',
+        email: 'test_user@gmail.com'
+      });
+    }
+  }, [isAuthenticated, login]);
 
-  // OTP verify handler
-  const handleVerifyOTP = async () => {
-    // dev-mode success
-    login({ id: 'demo-user', email: tempEmail }); // mock user object
-    setStep('dashboard');
+  // Check if user is authenticated and redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setCurrentPage('dashboard');
+    }
+  }, [isAuthenticated, user]);
+
+  // Navigation handlers
+  const goToDashboard = () => setCurrentPage('dashboard');
+  const goToReports = () => setCurrentPage('reports');
+  const goToReportDetail = (reportId: string) => {
+    setSelectedReportId(reportId);
+    setCurrentPage('report-detail');
   };
+  const goToTrends = (testName: string) => {
+    setSelectedTest(testName);
+    setCurrentPage('trends');
+  };
+  const goBackToReports = () => setCurrentPage('reports');
 
   // File upload handler
   const handleFileUpload = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('http://127.0.0.1:5001/upload', {
+    const response = await fetch(`${backendUrl}/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -46,40 +66,49 @@ function AppContent() {
       throw new Error(data.error);
     }
 
-    // Assume result has fileUrl and tests, but backend returns { result: analysis }
-    // For now, mock fileUrl and extract tests from result
-    const fileUrl = URL.createObjectURL(file); // or from backend if provided
-    const tests = data.result.tests || ['CBC', 'Blood Sugar']; // adjust based on backend response
-    return { fileUrl, tests };
+    // Use the Cloudinary URL returned by backend for all file types
+    const backendFileUrl = data.fileUrl;
+
+    // For display, prefer Cloudinary URL, fallback to blob URL only for localhost URLs
+    let displayUrl = backendFileUrl;
+    if (backendFileUrl.startsWith('http://localhost') || backendFileUrl.startsWith('blob:')) {
+      displayUrl = URL.createObjectURL(file);
+    }
+
+    return {
+      fileUrl: displayUrl,
+      originalFileUrl: backendFileUrl, // Always store the backend URL for saving
+      patient: data.patient,
+      tests: data.tests
+    };
   };
 
-  // Resend OTP (dev-mode)
-  const handleResendOTP = async () => {
-    alert('Resend disabled in dev-mode — use 123456');
-  };
-
-  if (step === 'otp') {
-    return (
-      <>
-        <OTPVerification
-          email={tempEmail}
-          onVerify={handleVerifyOTP}
-          onResend={handleResendOTP}
-        />
-        {displayedOtp && (
-          <div className="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg">
-            <p className="text-sm font-medium">Dev OTP: {displayedOtp}</p>
-          </div>
-        )}
-      </>
-    );
+  // Main app rendering - always show dashboard since we auto-login
+  if (currentPage === 'dashboard' && user) {
+    return <Dashboard onFileUpload={handleFileUpload} onGoToReports={goToReports} />;
   }
 
-  if (step === 'dashboard' && user) {
-    return <Dashboard onFileUpload={handleFileUpload} />;
+  if (currentPage === 'reports' && user) {
+    return <ReportsPage onBack={goToDashboard} onViewTrends={goToTrends} onViewReport={goToReportDetail} />;
   }
 
-  return <LoginPage onLoginSubmit={handleLogin} />;
+  if (currentPage === 'report-detail' && user) {
+    return <ReportDetail reportId={selectedReportId} onBack={goBackToReports} />;
+  }
+
+  if (currentPage === 'trends' && user) {
+    return <TrendChart testName={selectedTest} onBack={goBackToReports} />;
+  }
+
+  // Loading state while auto-logging in
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    </div>
+  );
 }
 
 export default function App() {

@@ -6,3 +6,8 @@ PyMuPDF
 flask
 flask-cors
 cffi
+openai
+python-dotenv
+supabase
+cloudinary
+requests
