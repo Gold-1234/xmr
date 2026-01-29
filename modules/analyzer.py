@@ -1,7 +1,7 @@
 import os
 import json
 from openai import OpenAI
-import google.genai as genai
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 # Load environment variables
