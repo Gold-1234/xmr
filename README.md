@@ -1,6 +1,17 @@
-# Health Report Analyzer
+# XMR - Medical Report Analyzer & Health Management Platform
 
-A comprehensive web application for analyzing health reports using OCR technology and AI-powered analysis. The system can process PDF documents and images to extract medical test results and provide interpretations.
+A comprehensive AI-powered health management platform that analyzes medical reports, tracks health trends, and connects patients with healthcare services. Features OCR technology for document processing, intelligent AI analysis, and seamless doctor appointment booking.
+
+## 🌟 Key Features
+
+- 🏥 **Doctor Appointment Booking** - Book appointments with doctors via Practo API integration
+- 📊 **Health Trend Visualization** - Plot and track any health metric over time (glucose, cholesterol, blood pressure, etc.)
+- 📄 **Multi-format Report Processing** - OCR-powered analysis of PDFs, images, and scanned documents
+- 🧠 **AI Medical Analysis** - Gemini & OpenAI powered intelligent health insights
+- 🔍 **Comprehensive Health Tracking** - Store and analyze historical medical data
+- 📈 **Interactive Charts** - Visualize health trends with beautiful, responsive graphs
+- 🔐 **Secure Authentication** - OTP-based login with Supabase
+- ☁️ **Cloud Storage** - Secure file storage with Cloudinary integration
 
 ## 🏗️ Architecture
 
@@ -20,6 +31,22 @@ This project consists of two main components:
 
 ## 🚀 Features
 
+### 🏥 Doctor Appointment Booking
+- **Practo API Integration**: Seamlessly book appointments with doctors through Practo
+- **Real-time Availability**: Check doctor schedules and book slots instantly
+- **Specialty-based Search**: Find doctors by specialty (cardiologist, endocrinologist, etc.)
+- **Location-based Results**: Get doctors near your location
+- **Appointment Management**: View, reschedule, or cancel appointments
+
+### 📊 Health Trend Visualization
+- **Interactive Charts**: Plot any health metric over time with beautiful, responsive graphs
+- **Glucose Tracking Example**: Monitor blood glucose levels across multiple tests
+- **Multi-parameter Tracking**: Track cholesterol, blood pressure, hemoglobin, etc.
+- **Date Range Selection**: View trends for custom time periods (last month, 3 months, year)
+- **Trend Analysis**: Identify patterns and health improvements over time
+- **Export Charts**: Download graphs for medical consultations
+
+### Core Analysis Features
 - 📄 **Multi-format Support**: Processes both PDF and image files
 - 🔍 **OCR Technology**: Advanced text extraction from scanned documents
 - 🧠 **AI Analysis**: Intelligent interpretation of medical test results
@@ -151,14 +178,35 @@ npm run dev
 
 ### Backend API (Flask)
 
+#### Core Analysis
 - `POST /upload` - Upload and analyze health report files
   - Accepts: `multipart/form-data` with `file` field
   - Returns: JSON with analysis results
+- `GET /reports/<user_id>` - Get user's saved medical reports
+- `GET /report/<report_id>` - Get detailed report information
+- `DELETE /report/<report_id>` - Delete a medical report
+
+#### Health Trends & Visualization
+- `GET /trends/<user_id>/<test_name>` - Get trend data for specific health metrics
+  - Example: `/trends/user123/glucose` - Returns glucose levels over time
+- `GET /stats/<user_id>` - Get comprehensive health statistics
+
+#### Doctor Appointment Booking
+- `GET /doctors/search` - Search doctors by specialty and location
+  - Parameters: `specialty`, `location`, `date`
+- `POST /appointments/book` - Book appointment via Practo API
+  - Body: `{doctor_id, date, time, user_details}`
+- `GET /appointments/<user_id>` - Get user's appointments
+- `PUT /appointments/<appointment_id>` - Reschedule appointment
+- `DELETE /appointments/<appointment_id>` - Cancel appointment
 
 ### Frontend API Routes
 
 - `/` - Landing page with authentication
 - `/dashboard` - Main dashboard for file upload and analysis
+- `/reports` - View all saved medical reports
+- `/trends` - Interactive health trend charts and graphs
+- `/appointments` - Doctor appointment booking and management
 - `/otp` - OTP verification page
 
 ## 🔧 Configuration
