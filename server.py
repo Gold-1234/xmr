@@ -13,6 +13,11 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+import pytesseract
+import shutil
+
+print("Tesseract binary:", shutil.which("tesseract"))
+print("Tesseract version:", pytesseract.get_tesseract_version())
 
 # Configure Cloudinary only if credentials are valid
 cloudinary_url = os.getenv('CLOUDINARY_URL')
