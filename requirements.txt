@@ -7,6 +7,7 @@ flask
 flask-cors
 cffi
 openai
+google-generativeai
 python-dotenv
 supabase
 cloudinary
