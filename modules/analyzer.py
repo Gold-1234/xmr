@@ -1,7 +1,7 @@
 import os
 import json
 from openai import OpenAI
-import google.generativeai as genai
+import google.genai as genai
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -10,7 +10,7 @@ load_dotenv()
 # Configure APIs
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-gemini_model = genai.GenerativeModel('gemini-1.5-flash')  # Fast model for quick responses
+gemini_model = genai.GenerativeModel('gemini-flash-2.5')  
 
 def extract_medical_data_gemini(text):
     """Use Gemini to extract structured medical data from report text."""
