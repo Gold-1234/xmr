@@ -4,6 +4,16 @@ import cv2
 import numpy as np
 import os
 
+# Check if Tesseract is available
+TESSERACT_AVAILABLE = False
+try:
+    # Try to get tesseract version to check if it's installed
+    pytesseract.get_tesseract_version()
+    TESSERACT_AVAILABLE = True
+except Exception:
+    TESSERACT_AVAILABLE = False
+    print("Tesseract OCR not available - OCR functionality disabled")
+
 # If using Windows, set this to your Tesseract installation path
 # Example: r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 # pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
@@ -31,6 +41,10 @@ def preprocess_image(image_path):
 
 def extract_text_from_image(image_path):
     """Extract text from an image using improved OCR preprocessing."""
+    if not TESSERACT_AVAILABLE:
+        print("Tesseract OCR not available - cannot process images")
+        return "OCR_UNAVAILABLE: Tesseract is not installed on this system. Please upload text files instead of images."
+
     try:
         preprocessed = preprocess_image(image_path)
 
