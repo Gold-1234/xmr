@@ -1,13 +1,24 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+interface UserProfile {
+  name: string;
+  age: string;
+  previousDiseases: string;
+  bodyType: 'athletic' | 'lean' | 'muscular' | 'healthy' | 'obese' | '';
+  currentGoal: string;
+  desiredOutcome: string;
+}
+
 interface User {
   id: string;
   email: string;
+  profile?: UserProfile;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (user: User) => void;
+  updateProfile: (profile: UserProfile) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -29,13 +40,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
+  const updateProfile = (profile: UserProfile) => {
+    if (user) {
+      const updatedUser = { ...user, profile };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, updateProfile, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

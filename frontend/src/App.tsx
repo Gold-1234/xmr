@@ -4,39 +4,72 @@ import Dashboard from './components/Dashboard';
 import ReportsPage from './components/ReportsPage';
 import ReportDetail from './components/ReportDetail';
 import TrendChart from './components/TrendChart';
+import LoginPage from './components/LoginPage';
+import OTPVerification from './components/OTPVerification';
+import UserOnboarding from './components/UserOnboarding';
+import GoogleVisionExtractor from './components/GoogleVisionExtractor';
 
-type Page = 'login' | 'otp' | 'dashboard' | 'reports' | 'report-detail' | 'trends';
+type Page = 'login' | 'otp' | 'onboarding' | 'dashboard' | 'reports' | 'report-detail' | 'trends' | 'google-vision';
 
 function AppContent() {
-  const { user, login, isAuthenticated } = useAuth();
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard'); // Start directly on dashboard
+  const { user, login, updateProfile, isAuthenticated } = useAuth();
+  const [currentPage, setCurrentPage] = useState<Page>('login'); // Start on login page
   const [selectedTest, setSelectedTest] = useState<string>('');
   const [selectedReportId, setSelectedReportId] = useState<string>('');
+  const [loginEmail, setLoginEmail] = useState<string>('');
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-  // Auto-login with test user on app load
-  useEffect(() => {
-    if (!isAuthenticated) {
-      // Auto-login with test user
-      login({
-        id: '4f6aedf0-2ecd-4ff8-bbd7-ef08743a8f23',
-        email: 'test_user@gmail.com'
-      });
-    }
-  }, [isAuthenticated, login]);
-
-  // Check if user is authenticated and redirect to dashboard
+  // Check if user is authenticated and redirect appropriately
   useEffect(() => {
     if (isAuthenticated && user) {
-      setCurrentPage('dashboard');
+      if (user.profile) {
+        setCurrentPage('dashboard');
+      } else {
+        setCurrentPage('onboarding');
+      }
     }
   }, [isAuthenticated, user]);
+
+  // Login flow handlers
+  const handleLoginSubmit = async (email: string, password: string) => {
+    // Call send-otp Supabase function
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to send OTP');
+    }
+
+    setLoginEmail(email);
+    setCurrentPage('otp');
+  };
+
+  const handleOTPVerify = () => {
+    // For demo purposes, create a mock user since we don't have full Supabase auth
+    login({
+      id: 'demo-user-id',
+      email: loginEmail,
+    });
+  };
+
+  const handleOnboardingComplete = (profile: any) => {
+    updateProfile(profile);
+    setCurrentPage('dashboard');
+  };
 
   // Navigation handlers
   const goToDashboard = () => setCurrentPage('dashboard');
   const goToReports = () => setCurrentPage('reports');
+  const goToGoogleVision = () => setCurrentPage('google-vision');
   const goToReportDetail = (reportId: string) => {
     setSelectedReportId(reportId);
     setCurrentPage('report-detail');
@@ -83,9 +116,25 @@ function AppContent() {
     };
   };
 
-  // Main app rendering - always show dashboard since we auto-login
-  if (currentPage === 'dashboard' && user) {
-    return <Dashboard onFileUpload={handleFileUpload} onGoToReports={goToReports} />;
+  // Main app rendering
+  if (!isAuthenticated) {
+    if (currentPage === 'login') {
+      return <LoginPage onLoginSubmit={handleLoginSubmit} />;
+    }
+
+    if (currentPage === 'otp') {
+      return <OTPVerification email={loginEmail} onVerify={handleOTPVerify} />;
+    }
+  }
+
+  if (isAuthenticated && user) {
+    if (currentPage === 'onboarding') {
+      return <UserOnboarding onComplete={handleOnboardingComplete} />;
+    }
+
+    if (currentPage === 'dashboard') {
+      return <Dashboard onFileUpload={handleFileUpload} onGoToReports={goToReports} onGoToGoogleVision={goToGoogleVision} />;
+    }
   }
 
   if (currentPage === 'reports' && user) {
@@ -100,7 +149,11 @@ function AppContent() {
     return <TrendChart testName={selectedTest} onBack={goBackToReports} />;
   }
 
-  // Loading state while auto-logging in
+  if (currentPage === 'google-vision') {
+    return <GoogleVisionExtractor />;
+  }
+
+  // Default fallback
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
       <div className="text-center">

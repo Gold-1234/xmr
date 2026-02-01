@@ -100,9 +100,7 @@ export default function LoginPage({ onLoginSubmit }: LoginPageProps) {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p>For demo: Use any email and password to create an account</p>
-        </div>
+
       </div>
     </div>
   );

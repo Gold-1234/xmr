@@ -1,0 +1,72 @@
+Dr. Lal PathLabs
+
+S47 – RADHA DIAGNOSTICS
+G.T. ROAD, JHUNSI, AWAS VIKAS COLONY,
+YOJNA-2, NR POLICE CHOWKI, ALLAHABAD, UP
+
+National Reference Lab: Sector-18, Block-E, Rohini, New Delhi – 110085
+Tel: 011-3040-3210
+Fax: 011-3040-3204
+Email: lalpathlabs@lalpathlabs.com
+Web: www.lalpathlabs.com
+
+
+PATIENT DETAILS
+Name        : Mr. NEERAJ OJHA
+Lab No.     : 242862201
+Age         : 27 Years
+Gender      : Male
+A/c Status  : P
+Ref By      : Dr. V. K. PANDEY
+
+Collected   : 1/8/2017  8:21:00 AM
+Received    : 1/8/2017  8:37:03 AM
+Reported    : 1/8/2017  6:52:30 PM
+Report Status : Final
+
+
+COMPLETE BLOOD COUNT (CBC)
+
+Hemoglobin                         : 12.00 g/dL     (13.00 – 17.00)
+Packed Cell Volume (PCV)           : 37.70 %        (40.00 – 50.00)
+RBC Count                          : 5.79 mill/mm3  (4.50 – 5.50)
+MCV                                : 65.00 fL       (80.00 – 100.00)
+MCH                                : 20.70 pg       (27.00 – 32.00)
+MCHC                               : 31.90 g/dL     (32.00 – 35.00)
+Red Cell Distribution Width (RDW)  : 15.90 %        (11.50 – 14.50)
+Total Leukocyte Count (TLC)        : 4.20 thou/mm3  (4.00 – 10.00)
+
+
+DIFFERENTIAL LEUCOCYTE COUNT (DLC)
+
+Segmented Neutrophils : 39.60 %  (40.00 – 80.00)
+Lymphocytes           : 50.30 %  (20.00 – 40.00)
+Monocytes             : 8.10 %   (2.00 – 10.00)
+Eosinophils           : 1.40 %   (1.00 – 6.00)
+Basophils             : 0.60 %   (< 2.00)
+
+
+ABSOLUTE LEUCOCYTE COUNT
+
+Neutrophils : 1.66 thou/mm3  (2.00 – 7.00)
+Lymphocytes : 2.11 thou/mm3  (1.00 – 3.00)
+Monocytes   : 0.34 thou/mm3  (0.20 – 1.00)
+Eosinophils : 0.06 thou/mm3  (0.02 – 0.50)
+Basophils   : 0.03 thou/mm3  (0.01 – 0.10)
+
+
+Platelet Count : 245.0 thou/mm3  (150.00 – 450.00)
+
+
+Advised:
+Hb HPLC to rule out Thalassemia Minor
+
+
+Notes:
+1. As per recommendation of the International Council for Standardization in Hematology,
+   differential leucocyte counts are additionally reported as absolute numbers per unit
+   volume of blood.
+2. Test conducted on EDTA whole blood.
+
+
+Page 1 of 3
