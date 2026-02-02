@@ -57,6 +57,9 @@ Thumbs.db
 uploads/
 outputs/
 
+# Assets (test files)
+assets/
+
 # Build outputs
 dist/
 build/
