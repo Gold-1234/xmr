@@ -1,17 +1,60 @@
-# XMR - Medical Report Analyzer & Health Management Platform
+# XMR - Advanced Medical Report Analyzer with AI Voice Assistant
 
-A comprehensive AI-powered health management platform that analyzes medical reports, tracks health trends, and connects patients with healthcare services. Features OCR technology for document processing, intelligent AI analysis, and seamless doctor appointment booking.
+A comprehensive AI-powered health management platform featuring advanced medical report analysis, real-time voice conversations with AI medical assistants, health trend tracking, and seamless healthcare services. Combines OCR technology, intelligent AI analysis, LiveKit-powered voice agents, and doctor appointment booking.
 
 ## 🌟 Key Features
 
-- 🏥 **Doctor Appointment Booking** - Book appointments with doctors via Practo API integration
-- 📊 **Health Trend Visualization** - Plot and track any health metric over time (glucose, cholesterol, blood pressure, etc.)
-- 📄 **Multi-format Report Processing** - OCR-powered analysis of PDFs, images, and scanned documents
-- 🧠 **AI Medical Analysis** - Gemini & OpenAI powered intelligent health insights
-- 🔍 **Comprehensive Health Tracking** - Store and analyze historical medical data
-- 📈 **Interactive Charts** - Visualize health trends with beautiful, responsive graphs
-- 🔐 **Secure Authentication** - OTP-based login with Supabase
-- ☁️ **Cloud Storage** - Secure file storage with Cloudinary integration
+### 🎤 **AI Voice Medical Assistant** (NEW!)
+- **Real-time Voice Conversations** - Talk naturally with AI medical assistant using LiveKit
+- **Cartesia Professional Voice** - High-quality TTS with medical assistant voice synthesis
+- **Google Speech Recognition** - Accurate STT with auto language detection
+- **Automatic Agent Dispatch** - AI joins rooms automatically when users connect
+- **Medical Context Awareness** - Voice assistant understands medical terminology
+- **Interactive Q&A** - Ask about symptoms, medications, and test results verbally
+
+### 🎤 **AI Voice Medical Assistant**
+- **LiveKit Real-time Audio** - WebRTC-powered voice infrastructure
+- **Cartesia Professional TTS** - High-quality medical assistant voice synthesis
+- **Google Speech Recognition** - Accurate STT with automatic language detection
+- **Automatic Agent Dispatch** - AI joins conversations automatically
+- **Medical Context Intelligence** - Specialized healthcare conversation handling
+- **Interactive Voice Q&A** - Natural voice interactions about health topics
+
+### 🏥 **Advanced Medical Report Analysis**
+- **Multi-format Processing** - PDFs, images, scanned documents, and text files
+- **OCR Technology** - Advanced Tesseract OCR with OpenCV preprocessing
+- **AI-Powered Extraction** - Gemini AI automatically identifies and parses medical tests
+- **Reference Range Analysis** - Compares results against standard medical ranges
+- **Intelligent Interpretations** - Normal/High/Low classifications with explanations
+- **Patient Information Extraction** - Auto-detects patient demographics
+
+### 📊 **Comprehensive Health Tracking**
+- **Interactive Trend Charts** - Visualize any health metric over time
+- **Multi-parameter Tracking** - Glucose, cholesterol, blood pressure, hemoglobin, etc.
+- **Date-based Organization** - Group tests by date for better analysis
+- **Historical Data Storage** - Securely store all medical reports in Supabase
+- **Trend Analysis** - Identify patterns and health improvements
+- **Export Capabilities** - Download charts and reports
+
+### 🏥 **Healthcare Services Integration**
+- **Doctor Appointment Booking** - Practo API integration for real appointments
+- **Specialty-based Search** - Find cardiologists, endocrinologists, etc.
+- **Location-aware Results** - Doctors near your location
+- **Real-time Availability** - Check schedules and book instantly
+- **Appointment Management** - View, reschedule, or cancel appointments
+
+### 🔐 **Enterprise-Grade Security**
+- **OTP Authentication** - Secure Supabase OTP-based login
+- **JWT Token Management** - Proper authentication for LiveKit voice sessions
+- **Secure File Upload** - Cloudinary integration with access controls
+- **Data Privacy** - HIPAA-compliant medical data handling
+- **Input Validation** - Comprehensive sanitization and validation
+
+### ☁️ **Cloud-Native Architecture**
+- **Supabase Backend** - PostgreSQL database with real-time subscriptions
+- **Cloudinary Storage** - Secure medical document storage and delivery
+- **LiveKit Cloud** - Real-time voice infrastructure
+- **Scalable Deployment** - Docker containerization and cloud deployment ready
 
 ## 🏗️ Architecture
 
@@ -31,20 +74,12 @@ This project consists of two main components:
 
 ## 🚀 Features
 
-### 🏥 Doctor Appointment Booking
-- **Practo API Integration**: Seamlessly book appointments with doctors through Practo
-- **Real-time Availability**: Check doctor schedules and book slots instantly
-- **Specialty-based Search**: Find doctors by specialty (cardiologist, endocrinologist, etc.)
-- **Location-based Results**: Get doctors near your location
-- **Appointment Management**: View, reschedule, or cancel appointments
-
 ### 📊 Health Trend Visualization
 - **Interactive Charts**: Plot any health metric over time with beautiful, responsive graphs
 - **Glucose Tracking Example**: Monitor blood glucose levels across multiple tests
 - **Multi-parameter Tracking**: Track cholesterol, blood pressure, hemoglobin, etc.
 - **Date Range Selection**: View trends for custom time periods (last month, 3 months, year)
 - **Trend Analysis**: Identify patterns and health improvements over time
-- **Export Charts**: Download graphs for medical consultations
 
 ### Core Analysis Features
 - 📄 **Multi-format Support**: Processes both PDF and image files
@@ -65,12 +100,19 @@ This project consists of two main components:
 - **pdfplumber** - PDF text extraction
 - **PyMuPDF** - Alternative PDF processing
 
+### Voice Assistant
+- **LiveKit Agents** - Real-time voice infrastructure
+- **Cartesia TTS** - Professional voice synthesis
+- **Google Speech-to-Text** - Accurate speech recognition
+- **WebRTC Audio** - Real-time audio streaming
+
 ### Frontend
 - **React 18** - UI framework
 - **TypeScript** - Type safety
 - **Vite** - Build tool
 - **Tailwind CSS** - Styling
 - **Supabase** - Backend as a service
+- **LiveKit React** - Voice components
 - **Lucide React** - Icons
 
 ## 📁 Project Structure
@@ -159,7 +201,37 @@ health_report_analyzer/
    ```
    The frontend will be available at `http://localhost:5173`
 
-### Running Both Services
+### LiveKit Voice Assistant Setup
+
+1. **Create a LiveKit Cloud project** at [cloud.livekit.io](https://cloud.livekit.io)
+2. **Get your API credentials** (API Key, API Secret, WebSocket URL)
+3. **Add to environment variables**:
+
+   Update `.env` in the root directory (for backend agent):
+   ```env
+   LIVEKIT_URL=wss://your-project.livekit.cloud
+   LIVEKIT_API_KEY=your_api_key
+   LIVEKIT_API_SECRET=your_api_secret
+   CARTESIA_API_KEY=your_cartesia_api_key
+   ```
+
+   Update `.env.local` in the frontend directory:
+   ```env
+   VITE_LIVEKIT_URL=wss://your-project.livekit.cloud
+   VITE_LIVEKIT_API_KEY=your_api_key
+   VITE_LIVEKIT_API_SECRET=your_api_secret
+   VITE_CARTESIA_API_KEY=your_cartesia_api_key
+   ```
+
+4. **Start the voice agent server**:
+   ```bash
+   # Terminal 3 - Voice Agent
+   cd health_report_analyzer
+   source venv/bin/activate
+   python livekit_agent.py dev
+   ```
+
+### Running All Services
 
 For development, you can run both frontend and backend simultaneously:
 

@@ -156,30 +156,61 @@ async def my_medical_agent(ctx: agents.JobContext):
             ),
         )
 
-        logger.info("✅ Medical Assistant session started successfully")
-        logger.info("🎉 Ready for voice conversations in room!")
+        # Initial greeting - speak immediately
+        logger.info("🎤 TTS LOG: Speaking greeting immediately...")
+        await session.say("Hi there, how can I help you today?")
+        logger.info("✅ TTS LOG: Greeting spoken")
 
-        # Generate initial greeting
-        logger.info("💬 Generating initial greeting...")
-        await session.say("Hi there, how can i help you today?")
+        # Add delay for audio transmission
+        await asyncio.sleep(2)
 
-        logger.info("🔄 Agent is now running and listening for voice input...")
-        logger.info("💡 Users can speak naturally - the agent will respond automatically")
-
-        # Keep the session running until the user leaves or disconnects
+        # Now start the connection loop
         await ctx.connect()
 
-        logger.info("👋 Medical assistant session ended")
+
+
+
+        @session.on("speech_started")
+        def on_speech_started(event):
+            logger.info("🎤 TTS LOG: Speech started event received")
+
+        @session.on("speech_stopped")
+        def on_speech_stopped(event):
+            logger.info("🎤 TTS LOG: Speech stopped event received")
+
+        @session.on("user_input_received")
+        def on_user_input(event):
+            logger.info(f"🤖 LLM LOG: User input received: {event}")
+            logger.info("🤖 LLM LOG: About to generate AI response...")
+
+        @session.on("agent_response_generated")
+        def on_agent_response(event):
+            logger.info(f"🤖 LLM LOG: Agent response generated: {event}")
+
+        @session.on("llm_started")
+        def on_llm_started(event):
+            logger.info("🤖 LLM LOG: LLM processing started")
+
+        @session.on("llm_stopped")
+        def on_llm_stopped(event):
+            logger.info("🤖 LLM LOG: LLM processing completed")
+
+        @session.on("tts_started")
+        def on_tts_started(event):
+            logger.info("🎤 TTS LOG: TTS generation started")
+
+        @session.on("tts_stopped")
+        def on_tts_stopped(event):
+            logger.info("🎤 TTS LOG: TTS generation completed")
+
+        
 
     except Exception as e:
         logger.error(f"❌ Error in medical assistant session: {e}")
         logger.error(f"   Error type: {type(e).__name__}")
         import traceback
         logger.error(f"   Traceback: {traceback.format_exc()}")
-    finally:
-        logger.info("🔄 Cleaning up agent session...")
-        await session.aclose()
-        logger.info("✅ Agent session cleanup complete")
+   
 
 
 def sync_cleanup_rooms():
