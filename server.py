@@ -6,10 +6,16 @@ from werkzeug.utils import secure_filename
 import os
 import re
 import json
+from datetime import datetime, timedelta
+import base64
 from main import analyze_report_api
+
+def btoa(s):
+    """Base64 encode a string (equivalent to JavaScript btoa)."""
+    return base64.b64encode(s.encode('utf-8')).decode('utf-8')
 from modules.database import (
     save_medical_report, get_user_reports, get_report_details,
-    get_test_trends, delete_report, get_user_stats, supabase_admin
+    get_test_trends, delete_report, get_user_stats, supabase_admin, supabase
 )
 from dotenv import load_dotenv
 from modules.analyzer import extract_dates_from_text_regex
@@ -115,6 +121,23 @@ def test_db():
             'status': 'success',
             'total_reports': response.count,
             'message': 'Database connection working'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/test-users')
+def test_users():
+    """Test users table."""
+    try:
+        # Test users table
+        response = supabase_admin.table('users').select('count', count='exact').execute()
+        return jsonify({
+            'status': 'success',
+            'total_users': response.count,
+            'message': 'Users table accessible'
         })
     except Exception as e:
         return jsonify({
@@ -882,6 +905,82 @@ def extract_report_types(text):
 
     return list(set(report_types))  # Remove duplicates
 
+@app.route('/auth/send-otp', methods=['POST'])
+def send_otp():
+    """Send OTP for authentication - simplified for development."""
+    try:
+        data = request.get_json()
+
+        if not data or not data.get('email') or not data.get('password'):
+            return jsonify({'error': 'Email and password are required'}), 400
+
+        email = data['email']
+        password = data['password']
+
+        # For development: Always create/use a test user with proper UUID
+        test_user_id = '550e8400-e29b-41d4-a716-446655440000'  # Valid UUID format
+
+        # Hash the password
+        password_hash = btoa(password)
+
+        # For development: Always succeed and return test user
+        print(f"Development mode: Creating/authenticating user {email}")
+
+        return jsonify({
+            'success': True,
+            'message': 'OTP generated successfully (dev mode)',
+            'userId': test_user_id,
+            'otpCode': '123456'  # Always use 123456 for development
+        })
+
+    except Exception as e:
+        print(f"Send OTP error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/auth/verify-otp', methods=['POST'])
+def verify_otp():
+    """Verify OTP for authentication - backend implementation of Supabase function."""
+    try:
+        data = request.get_json()
+
+        if not data or not data.get('email') or not data.get('otp'):
+            return jsonify({'error': 'Email and OTP are required'}), 400
+
+        email = data['email']
+        otp = data['otp']
+
+        # Find valid OTP record
+        otp_record = supabase_admin.table('otp_codes').select('*').eq('email', email).eq('code', otp).eq('verified', False).order('created_at', desc=True).execute()
+
+        if not otp_record.data or len(otp_record.data) == 0:
+            return jsonify({'error': 'Invalid OTP'}), 401
+
+        otp_data = otp_record.data[0]
+
+        # Check expiration
+        if datetime.now() > datetime.fromisoformat(otp_data['expires_at']):
+            return jsonify({'error': 'OTP has expired'}), 401
+
+        # Mark OTP as verified
+        supabase_admin.table('otp_codes').update({'verified': True}).eq('id', otp_data['id']).execute()
+
+        # Get user data
+        user_result = supabase_admin.table('users').select('id, email').eq('id', otp_data['user_id']).execute()
+
+        if not user_result.data or len(user_result.data) == 0:
+            return jsonify({'error': 'User not found'}), 404
+
+        return jsonify({
+            'success': True,
+            'user': user_result.data[0]
+        })
+
+    except Exception as e:
+        print(f"Verify OTP error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/voice-chat', methods=['POST'])
 def voice_chat():
     """AI voice chat endpoint for discussing medical reports."""
@@ -892,26 +991,29 @@ def voice_chat():
             return jsonify({'error': 'No message provided'}), 400
 
         user_message = data['message']
-        report_data = data.get('report_data', {})
+        report_data = data.get('report_data')
+        context_type = data.get('context', 'general_health')
 
-        # Extract key information from report data
-        patient_info = report_data.get('patient', {})
-        tests = report_data.get('tests', [])
-        health_summary = ""
-        concerning_findings = []
-        dietary_recommendations = []
-        lifestyle_recommendations = []
+        # Check if we have report data
+        if report_data and context_type == 'with_report':
+            # Original logic for when we have report data
+            patient_info = report_data.get('patient', {})
+            tests = report_data.get('tests', [])
+            health_summary = ""
+            concerning_findings = []
+            dietary_recommendations = []
+            lifestyle_recommendations = []
 
-        # Get summary data from the first test (where LLM stores summary data)
-        if tests:
-            first_test = tests[0]
-            health_summary = first_test.get('health_summary', '')
-            concerning_findings = first_test.get('concerning_findings', [])
-            dietary_recommendations = first_test.get('dietary_recommendations', [])
-            lifestyle_recommendations = first_test.get('lifestyle_recommendations', [])
+            # Get summary data from the first test (where LLM stores summary data)
+            if tests:
+                first_test = tests[0]
+                health_summary = first_test.get('health_summary', '')
+                concerning_findings = first_test.get('concerning_findings', [])
+                dietary_recommendations = first_test.get('dietary_recommendations', [])
+                lifestyle_recommendations = first_test.get('lifestyle_recommendations', [])
 
-        # Build comprehensive context for the LLM
-        context = f"""
+            # Build comprehensive context for the LLM
+            context = f"""
 PATIENT INFORMATION:
 - Name: {patient_info.get('name', 'Not provided')}
 - Age: {patient_info.get('age', 'Not provided')}
@@ -932,17 +1034,16 @@ LIFESTYLE RECOMMENDATIONS:
 TEST RESULTS:
 """
 
-        # Add test results
-        for test in tests[:20]:  # Limit to first 20 tests to avoid token limits
-            context += f"""
+            # Add test results
+            for test in tests[:20]:  # Limit to first 20 tests to avoid token limits
+                context += f"""
 - {test.get('test_name', 'Unknown')}: {test.get('value', 'N/A')} {test.get('unit', '')}
   Reference Range: {test.get('reference_range', 'Not provided')}
   Interpretation: {test.get('interpretation', 'Unknown')}
   Explanation: {test.get('explanation', 'Not provided')}
 """
 
-        # Create the conversation prompt
-        system_prompt = """You are a knowledgeable and compassionate medical assistant helping patients understand their lab results. You have access to the patient's complete medical report including:
+            system_prompt = """You are a knowledgeable and compassionate medical assistant helping patients understand their lab results. You have access to the patient's complete medical report including:
 
 - Patient demographics
 - All test results with values, reference ranges, and interpretations
@@ -961,7 +1062,7 @@ Guidelines for responses:
 
 Remember: You are not a substitute for professional medical advice."""
 
-        conversation_prompt = f"""{system_prompt}
+            conversation_prompt = f"""{system_prompt}
 
 REPORT CONTEXT:
 {context}
@@ -969,6 +1070,27 @@ REPORT CONTEXT:
 USER QUESTION: {user_message}
 
 Please provide a helpful, conversational response based on the report data above."""
+        else:
+            # General health advice when no report data is available
+            context = """
+You are a knowledgeable and compassionate general health assistant. You can provide general health information, wellness tips, and guidance on healthy living, but you cannot analyze specific medical test results or provide personalized medical advice.
+
+Guidelines for responses:
+- Be conversational and easy to understand
+- Provide general health information and wellness tips
+- Always recommend consulting healthcare professionals for specific medical concerns
+- Be encouraging and supportive
+- Keep responses concise but informative
+- If asked about specific symptoms or conditions, suggest seeing a doctor
+- Focus on general wellness, nutrition, exercise, and healthy lifestyle habits
+
+Remember: You are not a substitute for professional medical advice."""
+
+            conversation_prompt = f"""{context}
+
+USER QUESTION: {user_message}
+
+Please provide helpful general health information and wellness tips. If the question involves specific medical symptoms, conditions, or test results, politely remind the user to consult with a healthcare professional."""
 
         # Try Gemini first, fallback to OpenAI
         response_text = ""

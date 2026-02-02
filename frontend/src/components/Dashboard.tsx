@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Upload, FileText, Image as ImageIcon, LogOut, Loader2, BarChart3 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Report from './Report';
+import VoiceAgent from './VoiceAgent';
 
 interface Patient {
   name: string | null;
@@ -324,13 +325,14 @@ export default function Dashboard({ onFileUpload, onGoToReports, onGoToGoogleVis
             {user?.profile && (
               <div className="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Your Health Journey</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-white rounded-lg p-4 shadow-sm">
                     <h4 className="font-semibold text-gray-900 mb-2">Your Profile</h4>
                     <div className="space-y-2 text-sm text-gray-600">
                       <p><strong>Age:</strong> {user.profile.age} years</p>
+                      <p><strong>Height:</strong> {user.profile.height} cm</p>
+                      <p><strong>Weight:</strong> {user.profile.weight} kg</p>
                       <p><strong>Body Type:</strong> {user.profile.bodyType}</p>
-                      <p><strong>Goal:</strong> {user.profile.currentGoal}</p>
                       {user.profile.previousDiseases && (
                         <p><strong>Medical History:</strong> {user.profile.previousDiseases}</p>
                       )}
@@ -338,46 +340,57 @@ export default function Dashboard({ onFileUpload, onGoToReports, onGoToGoogleVis
                   </div>
 
                   <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <h4 className="font-semibold text-gray-900 mb-2">Your Vision</h4>
-                    <p className="text-sm text-gray-600">{user.profile.desiredOutcome}</p>
-                  </div>
-                </div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Your BMI</h4>
+                    {user.profile.height && user.profile.weight ? (() => {
+                      const heightM = parseFloat(user.profile.height) / 100;
+                      const weightKg = parseFloat(user.profile.weight);
+                      const bmi = (weightKg / (heightM * heightM)).toFixed(1);
+                      let bmiCategory = '';
+                      let bmiColor = '';
 
-                <div className="mt-6 bg-white rounded-lg p-4 shadow-sm">
-                  <h4 className="font-semibold text-gray-900 mb-2">💡 Personalized Recommendations</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    {user.profile.bodyType === 'obese' && (
-                      <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-                        <p className="font-medium text-red-800">Weight Management</p>
-                        <p className="text-red-600">Focus on sustainable weight loss through diet and exercise</p>
-                      </div>
+                      if (parseFloat(bmi) < 18.5) {
+                        bmiCategory = 'Underweight';
+                        bmiColor = 'text-blue-600';
+                      } else if (parseFloat(bmi) < 25) {
+                        bmiCategory = 'Normal';
+                        bmiColor = 'text-green-600';
+                      } else if (parseFloat(bmi) < 30) {
+                        bmiCategory = 'Overweight';
+                        bmiColor = 'text-yellow-600';
+                      } else {
+                        bmiCategory = 'Obese';
+                        bmiColor = 'text-red-600';
+                      }
+
+                      return (
+                        <div className="space-y-2">
+                          <p className="text-3xl font-bold text-gray-900">{bmi}</p>
+                          <p className={`text-sm font-medium ${bmiColor}`}>{bmiCategory}</p>
+                          <p className="text-xs text-gray-500">Body Mass Index</p>
+                        </div>
+                      );
+                    })() : (
+                      <p className="text-sm text-gray-500">Complete height and weight to see BMI</p>
                     )}
-                    {user.profile.bodyType === 'athletic' && (
-                      <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                        <p className="font-medium text-green-800">Performance Optimization</p>
-                        <p className="text-green-600">Monitor recovery markers and optimize training intensity</p>
-                      </div>
-                    )}
-                    {user.profile.currentGoal.toLowerCase().includes('diabetes') && (
-                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                        <p className="font-medium text-blue-800">Blood Sugar Control</p>
-                        <p className="text-blue-600">Regular glucose monitoring and lifestyle adjustments</p>
-                      </div>
-                    )}
-                    {parseInt(user.profile.age) > 40 && (
-                      <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                        <p className="font-medium text-purple-800">Preventive Care</p>
-                        <p className="text-purple-600">Regular check-ups for age-related health concerns</p>
-                      </div>
-                    )}
-                    <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                      <p className="font-medium text-yellow-800">Regular Monitoring</p>
-                      <p className="text-yellow-600">Upload reports regularly to track health trends</p>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <h4 className="font-semibold text-gray-900 mb-2">Your Goal</h4>
+                    <p className="text-sm text-gray-600 mb-3">{user.profile.currentGoal}</p>
+                    <div className="pt-2 border-t border-gray-100">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Your Vision</p>
+                      <p className="text-sm text-gray-600">{user.profile.desiredOutcome}</p>
                     </div>
                   </div>
                 </div>
               </div>
             )}
+
+            {/* Voice Agent - Available before uploading */}
+            <VoiceAgent
+              patientInfo={null}
+              extractedTests={[]}
+            />
           </div>
         ) : (
           <Report

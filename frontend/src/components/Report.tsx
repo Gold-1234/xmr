@@ -227,6 +227,12 @@ const Report: React.FC<ReportProps> = ({
                   <p className="text-sm">Analysis in progress...</p>
                 </div>
               )}
+
+              {/* Voice Agent - Integrated into Uploaded Report Section */}
+              <VoiceAgent
+                patientInfo={patientInfo}
+                extractedTests={extractedTests}
+              />
             </div>
           </div>
 
@@ -533,13 +539,7 @@ const Report: React.FC<ReportProps> = ({
         </div>
       )}
 
-      {/* AI Voice Agent */}
-      {extractedTests.length > 0 && (
-        <VoiceAgent
-          patientInfo={patientInfo}
-          extractedTests={extractedTests}
-        />
-      )}
+
     </div>
   );
 };

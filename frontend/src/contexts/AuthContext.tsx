@@ -3,6 +3,8 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 interface UserProfile {
   name: string;
   age: string;
+  height: string; // in cm
+  weight: string; // in kg
   previousDiseases: string;
   bodyType: 'athletic' | 'lean' | 'muscular' | 'healthy' | 'obese' | '';
   currentGoal: string;
@@ -13,6 +15,7 @@ interface User {
   id: string;
   email: string;
   profile?: UserProfile;
+  onboardingCompleted?: boolean;
 }
 
 interface AuthContextType {
@@ -31,13 +34,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      console.log('🔄 Loading user from localStorage:', parsedUser);
+      setUser(parsedUser);
+    } else {
+      console.log('📭 No user found in localStorage');
     }
   }, []);
 
   const login = (userData: User) => {
+    console.log('👤 Logging in user:', userData);
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+    console.log('💾 User stored in localStorage');
   };
 
   const updateProfile = (profile: UserProfile) => {

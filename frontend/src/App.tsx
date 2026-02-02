@@ -23,23 +23,38 @@ function AppContent() {
 
   // Check if user is authenticated and redirect appropriately
   useEffect(() => {
-    if (isAuthenticated && user) {
-      if (user.profile) {
+    console.log('🔍 App useEffect - isAuthenticated:', isAuthenticated, 'user:', !!user);
+
+    // Check if there's already a stored user to avoid overwriting
+    const storedUser = localStorage.getItem('user');
+
+    if (!isAuthenticated && !storedUser) {
+      console.log('👤 No stored user found, creating test user...');
+      // Only create test user if nothing is stored
+      login({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        email: 'test@example.com',
+      });
+    } else if (user) {
+      // Check if user has essential details (name and age) in profile
+      const hasEssentialDetails = user.profile && user.profile.name && user.profile.age;
+      if (hasEssentialDetails) {
+        console.log('📊 User has essential details (name, age), going to dashboard');
         setCurrentPage('dashboard');
       } else {
+        console.log('📝 User missing essential details, needs onboarding');
         setCurrentPage('onboarding');
       }
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, login]);
 
   // Login flow handlers
   const handleLoginSubmit = async (email: string, password: string) => {
-    // Call send-otp Supabase function
-    const response = await fetch(`${supabaseUrl}/functions/v1/send-otp`, {
+    // Call backend send-otp endpoint
+    const response = await fetch(`${backendUrl}/auth/send-otp`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({ email, password }),
     });
@@ -53,16 +68,19 @@ function AppContent() {
     setCurrentPage('otp');
   };
 
-  const handleOTPVerify = () => {
-    // For demo purposes, create a mock user since we don't have full Supabase auth
+  const handleOTPVerify = (user: { id: string; email: string }) => {
+    // Login with real user data from backend
     login({
-      id: 'demo-user-id',
-      email: loginEmail,
+      id: user.id,
+      email: user.email,
     });
   };
 
   const handleOnboardingComplete = (profile: any) => {
+    console.log('✅ Onboarding completed with profile:', profile);
+    // Update profile which saves to localStorage
     updateProfile(profile);
+    console.log('💾 Onboarding completion saved to localStorage');
     setCurrentPage('dashboard');
   };
 

@@ -4,6 +4,8 @@ import { User, Target, Heart, ChevronRight, ChevronLeft } from 'lucide-react';
 interface UserProfile {
   name: string;
   age: string;
+  height: string;
+  weight: string;
   previousDiseases: string;
   bodyType: 'athletic' | 'lean' | 'muscular' | 'healthy' | 'obese' | '';
   currentGoal: string;
@@ -27,6 +29,8 @@ export default function UserOnboarding({ onComplete }: UserOnboardingProps) {
   const [profile, setProfile] = useState<UserProfile>({
     name: '',
     age: '',
+    height: '',
+    weight: '',
     previousDiseases: '',
     bodyType: '',
     currentGoal: '',
@@ -93,19 +97,51 @@ export default function UserOnboarding({ onComplete }: UserOnboardingProps) {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Age
-                </label>
-                <input
-                  type="number"
-                  value={profile.age}
-                  onChange={(e) => updateProfile('age', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your age"
-                  min="1"
-                  max="120"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Age
+                  </label>
+                  <input
+                    type="number"
+                    value={profile.age}
+                    onChange={(e) => updateProfile('age', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Age"
+                    min="1"
+                    max="120"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Height (cm)
+                  </label>
+                  <input
+                    type="number"
+                    value={profile.height}
+                    onChange={(e) => updateProfile('height', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Height in cm"
+                    min="50"
+                    max="250"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Weight (kg)
+                  </label>
+                  <input
+                    type="number"
+                    value={profile.weight}
+                    onChange={(e) => updateProfile('weight', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Weight in kg"
+                    min="20"
+                    max="300"
+                  />
+                </div>
               </div>
             </div>
           </div>

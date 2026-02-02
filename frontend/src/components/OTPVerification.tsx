@@ -1,9 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { ShieldCheck, Loader2, Mail } from 'lucide-react';
 
+interface User {
+  id: string;
+  email: string;
+}
+
 interface OTPVerificationProps {
   email: string;
-  onVerify: () => void; // dev-mode, no actual OTP needed
+  onVerify: (user: User) => void;
   onResend?: () => Promise<void>;
 }
 
@@ -55,17 +60,47 @@ export default function OTPVerification({ email, onVerify, onResend }: OTPVerifi
     }
 
     setLoading(true);
+    setError('');
 
-    setTimeout(() => {
-      if (otpString === "123456") {
-        onVerify(); // dev-mode success
-      } else {
-        setError("Invalid OTP — use 123456");
-        setOtp(['', '', '', '', '', '']);
-        inputRefs.current[0]?.focus();
+    try {
+      // For development: Accept 123456 as valid OTP
+      if (otpString === '123456') {
+        // Create test user with proper UUID for database compatibility
+        const testUser = {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          email: email
+        };
+        onVerify(testUser);
+        return;
       }
+
+      // Call backend verify-otp endpoint for production
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otp: otpString }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to verify OTP');
+      }
+
+      const result = await response.json();
+      if (result.success && result.user) {
+        onVerify(result.user); // Pass user data to parent
+      } else {
+        throw new Error('Verification failed');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Verification failed');
+      setOtp(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   const handleResend = async () => {

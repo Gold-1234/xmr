@@ -13,3 +13,5 @@ supabase
 cloudinary
 requests
 gunicorn
+livekit-agents[silero,turn-detector]
+livekit-plugins-noise-cancellation
