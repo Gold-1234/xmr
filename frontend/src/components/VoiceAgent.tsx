@@ -57,7 +57,7 @@ const generateLiveKitToken = async (apiKey: string, apiSecret: string, roomName:
       // Auto-dispatch medical assistant agent when user joins
       roomConfig: {
         agents: [{
-          agentName: '',
+          agentName: 'medical-assistant',
           metadata: 'medical-ai-assistant'
         }]
       }
