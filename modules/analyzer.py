@@ -362,7 +362,7 @@ def convert_page_based_to_legacy(page_response):
                 "value": str(test.get('value', '')),
                 "unit": test.get('unit'),
                 "reference_range": None,  # Not provided in page format
-                "interpretation": "Normal" if not test.get('is_abnormal', False) else "Abnormal"
+                    "interpretation": "Normal" if not test.get('is_abnormal', False) else "High"
             })
 
     return {
@@ -399,7 +399,7 @@ def convert_new_llm_format_to_legacy(llm_response):
             "value": str(data_point.get('value', '')),
             "unit": data_point.get('unit'),
             "reference_range": None,  # Not provided in new format
-            "interpretation": "Normal" if not data_point.get('is_abnormal', False) else "Abnormal"
+                "interpretation": "Normal" if not data_point.get('is_abnormal', False) else "High"
         }
         tests.append(test)
 
@@ -1113,7 +1113,7 @@ def group_tests_by_date(text, tests, llm_data=None):
                         "value": str(test.get('value', '')),
                         "unit": test.get('unit'),
                         "reference_range": None,  # Not provided in page format
-                        "interpretation": "Normal" if not test.get('is_abnormal', False) else "Abnormal"
+                        "interpretation": "Normal" if not test.get('is_abnormal', False) else "High"
                     }
                     formatted_tests.append(formatted_test)
 
@@ -1145,7 +1145,7 @@ def group_tests_by_date(text, tests, llm_data=None):
                         "value": str(data_point.get('value', '')),
                         "unit": data_point.get('unit'),
                         "reference_range": None,  # Not provided in LLM format
-                        "interpretation": "Normal" if not data_point.get('is_abnormal', False) else "Abnormal"
+                        "interpretation": "Normal" if not data_point.get('is_abnormal', False) else "High"
                     }
                     entry_tests.append(test)
 

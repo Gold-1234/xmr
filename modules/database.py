@@ -63,6 +63,28 @@ def save_local_reports(reports: Dict[str, List[Dict]]):
     except Exception as e:
         print(f"Error saving local reports: {e}")
 
+def normalize_interpretation(interpretation: str) -> str:
+    """Normalize interpretation values to match database constraints."""
+    if not interpretation:
+        return "Unknown"
+
+    # Convert common variations to database-allowed values
+    interpretation_lower = interpretation.lower().strip()
+
+    if interpretation_lower in ['abnormal', 'abnormal results', 'outside range']:
+        return "High"  # Default abnormal results to High
+    elif interpretation_lower in ['normal', 'within range', 'normal range']:
+        return "Normal"
+    elif interpretation_lower in ['low', 'below range', 'below normal']:
+        return "Low"
+    elif interpretation_lower in ['high', 'above range', 'above normal']:
+        return "High"
+    elif interpretation_lower == 'unknown':
+        return "Unknown"
+    else:
+        # For any other value, default to Unknown
+        return "Unknown"
+
 def save_medical_report(user_id: str, filename: str, file_type: str, file_url: str,
                        patient_info: dict, test_results: list) -> dict:
     """Save a medical report with test results to Supabase or local storage."""
@@ -98,13 +120,16 @@ def save_medical_report(user_id: str, filename: str, file_type: str, file_url: s
             # Then save individual test results
             test_results_data = []
             for test in test_results:
+                # Normalize interpretation to match database constraints
+                normalized_interpretation = normalize_interpretation(test.get('interpretation', 'Unknown'))
+
                 test_result = {
                     'report_id': report_id,
                     'test_name': test['test_name'],
                     'value': test['value'],
                     'unit': test.get('unit'),
                     'reference_range': test.get('reference_range'),
-                    'interpretation': test['interpretation'],
+                    'interpretation': normalized_interpretation,
                     'explanation': test.get('explanation')
                 }
                 test_results_data.append(test_result)

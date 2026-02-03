@@ -15,7 +15,7 @@ def btoa(s):
     return base64.b64encode(s.encode('utf-8')).decode('utf-8')
 from modules.database import (
     save_medical_report, get_user_reports, get_report_details,
-    get_test_trends, delete_report, get_user_stats, supabase_admin, supabase
+    get_test_trends, delete_report, get_user_stats, supabase_admin, supabase, SUPABASE_AVAILABLE
 )
 from dotenv import load_dotenv
 from modules.analyzer import extract_dates_from_text_regex
@@ -922,6 +922,21 @@ def send_otp():
 
         # Hash the password
         password_hash = btoa(password)
+
+        # Create or update user in database
+        if SUPABASE_AVAILABLE:
+            try:
+                # Try to insert user, ignore if already exists
+                user_data = {
+                    'id': test_user_id,
+                    'email': email,
+                    'password_hash': password_hash
+                }
+                supabase_admin.table('users').upsert(user_data).execute()
+                print(f"✅ User created/updated in database: {test_user_id}")
+            except Exception as db_error:
+                print(f"⚠️ Failed to create user in database: {db_error}")
+                # Continue anyway for development
 
         # For development: Always succeed and return test user
         print(f"Development mode: Creating/authenticating user {email}")
