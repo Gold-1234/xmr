@@ -25,17 +25,7 @@ function AppContent() {
   useEffect(() => {
     console.log('🔍 App useEffect - isAuthenticated:', isAuthenticated, 'user:', !!user);
 
-    // Check if there's already a stored user to avoid overwriting
-    const storedUser = localStorage.getItem('user');
-
-    if (!isAuthenticated && !storedUser) {
-      console.log('👤 No stored user found, creating test user...');
-      // Only create test user if nothing is stored
-      login({
-        id: '550e8400-e29b-41d4-a716-446655440000',
-        email: 'test@example.com',
-      });
-    } else if (user) {
+    if (user) {
       // Check if user has essential details (name and age) in profile
       const hasEssentialDetails = user.profile && user.profile.name && user.profile.age;
       if (hasEssentialDetails) {
@@ -45,8 +35,12 @@ function AppContent() {
         console.log('📝 User missing essential details, needs onboarding');
         setCurrentPage('onboarding');
       }
+    } else {
+      // No authenticated user, stay on login page
+      console.log('🔒 No authenticated user, staying on login page');
+      setCurrentPage('login');
     }
-  }, [isAuthenticated, user, login]);
+  }, [isAuthenticated, user]);
 
   // Login flow handlers
   const handleLoginSubmit = async (email: string, password: string) => {
