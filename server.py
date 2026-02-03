@@ -6,6 +6,8 @@ from werkzeug.utils import secure_filename
 import os
 import re
 import json
+import uuid
+import hashlib
 from datetime import datetime, timedelta
 import base64
 from main import analyze_report_api
@@ -70,7 +72,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Get port from environment or default
-port = int(os.environ.get('PORT', 5019))
+port = int(os.environ.get('PORT', 5002))
 
 # Serve uploaded files
 @app.route('/uploads/<filename>')
@@ -905,51 +907,71 @@ def extract_report_types(text):
 
     return list(set(report_types))  # Remove duplicates
 
-@app.route('/auth/send-otp', methods=['POST'])
-def send_otp():
-    """Send OTP for authentication - simplified for development."""
+@app.route('/auth/login', methods=['POST'])
+def login():
+    """Direct login - create user with email and return user ID."""
     try:
         data = request.get_json()
 
-        if not data or not data.get('email') or not data.get('password'):
-            return jsonify({'error': 'Email and password are required'}), 400
+        if not data or not data.get('email'):
+            return jsonify({'error': 'Email is required'}), 400
 
         email = data['email']
-        password = data['password']
+        password = data.get('password', 'default123')  # Optional password
 
-        # For development: Always create/use a test user with proper UUID
-        test_user_id = '550e8400-e29b-41d4-a716-446655440000'  # Valid UUID format
-
-        # Hash the password
-        password_hash = btoa(password)
-
-        # Create or update user in database
+        # Check if user already exists
+        existing_user = None
         if SUPABASE_AVAILABLE:
             try:
-                # Try to insert user, ignore if already exists
-                user_data = {
-                    'id': test_user_id,
-                    'email': email,
-                    'password_hash': password_hash
-                }
-                supabase_admin.table('users').upsert(user_data).execute()
-                print(f"✅ User created/updated in database: {test_user_id}")
-            except Exception as db_error:
-                print(f"⚠️ Failed to create user in database: {db_error}")
-                # Continue anyway for development
+                existing_users = supabase_admin.table('users').select('id, email').eq('email', email).execute()
+                if existing_users.data and len(existing_users.data) > 0:
+                    existing_user = existing_users.data[0]
+                    print(f"✅ Found existing user: {existing_user['id']} ({existing_user['email']})")
+            except Exception as e:
+                print(f"⚠️ Error checking for existing user: {e}")
 
-        # For development: Always succeed and return test user
-        print(f"Development mode: Creating/authenticating user {email}")
+        if existing_user:
+            # Use existing user ID
+            user_id = existing_user['id']
+            print(f"✅ Using existing user ID: {user_id}")
+        else:
+            # Generate a unique user ID based on email (deterministic)
+            import hashlib
+            # Create a UUID from the first 16 bytes of the MD5 hash
+            email_hash = hashlib.md5(email.encode()).digest()
+            user_id = str(uuid.UUID(bytes=email_hash[:16]))
+
+            # Hash the password
+            password_hash = btoa(password)
+
+            # Create new user in database
+            if SUPABASE_AVAILABLE:
+                try:
+                    user_data = {
+                        'id': user_id,
+                        'email': email,
+                        'password_hash': password_hash
+                    }
+                    supabase_admin.table('users').insert(user_data).execute()
+                    print(f"✅ User created in database: {user_id} ({email})")
+                except Exception as db_error:
+                    print(f"⚠️ Failed to create user in database: {db_error}")
+                    # Continue anyway for development
+
+        # Return user data directly (no OTP needed)
+        print(f"✅ User authenticated: {email} -> {user_id}")
 
         return jsonify({
             'success': True,
-            'message': 'OTP generated successfully (dev mode)',
-            'userId': test_user_id,
-            'otpCode': '123456'  # Always use 123456 for development
+            'message': 'Login successful',
+            'user': {
+                'id': user_id,
+                'email': email
+            }
         })
 
     except Exception as e:
-        print(f"Send OTP error: {e}")
+        print(f"Login error: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -1159,6 +1181,6 @@ Please provide helpful general health information and wellness tips. If the ques
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT',5001 )) 
+    port = 5002  # Hardcoded for now
     print(f"Starting server on port {port}")
     app.run(debug=False, host='0.0.0.0', port=port, threaded=True)

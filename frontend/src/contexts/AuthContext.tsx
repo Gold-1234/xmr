@@ -38,15 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🔄 Loading user from localStorage:', parsedUser);
       setUser(parsedUser);
     } else {
-      console.log('📭 No user found in localStorage, creating default user with reports');
-      // Create default user with the user ID that has reports
-      const defaultUser = {
-        id: '4f6aedf0-2ecd-4ff8-bbd7-ef08743a8f23',
-        email: 'test@example.com'
-      };
-      setUser(defaultUser);
-      localStorage.setItem('user', JSON.stringify(defaultUser));
-      console.log('✅ Created default user with reports:', defaultUser);
+      console.log('📭 No user found in localStorage - user needs to login');
     }
   }, []);
 

@@ -50,8 +50,8 @@ function AppContent() {
 
   // Login flow handlers
   const handleLoginSubmit = async (email: string, password: string) => {
-    // Call backend send-otp endpoint
-    const response = await fetch(`${backendUrl}/auth/send-otp`, {
+    // Call backend login endpoint directly
+    const response = await fetch(`${backendUrl}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,19 +61,26 @@ function AppContent() {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to send OTP');
+      throw new Error(error.error || 'Login failed');
     }
 
-    setLoginEmail(email);
-    setCurrentPage('otp');
-  };
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.message || 'Login failed');
+    }
 
-  const handleOTPVerify = (user: { id: string; email: string }) => {
-    // Login with real user data from backend
+    // Login with user data from backend
     login({
-      id: user.id,
-      email: user.email,
+      id: data.user.id,
+      email: data.user.email,
     });
+
+    // Go directly to dashboard or onboarding based on profile
+    if (data.user.profile && data.user.profile.name && data.user.profile.age) {
+      setCurrentPage('dashboard');
+    } else {
+      setCurrentPage('onboarding');
+    }
   };
 
   const handleOnboardingComplete = (profile: any) => {
@@ -138,10 +145,6 @@ function AppContent() {
   if (!isAuthenticated) {
     if (currentPage === 'login') {
       return <LoginPage onLoginSubmit={handleLoginSubmit} />;
-    }
-
-    if (currentPage === 'otp') {
-      return <OTPVerification email={loginEmail} onVerify={handleOTPVerify} />;
     }
   }
 
