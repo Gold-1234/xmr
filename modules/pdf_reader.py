@@ -6,15 +6,26 @@ from modules.ocr_reader import extract_text_from_image
 import cv2
 import numpy as np
 import json
-import google.generativeai as genai
 from dotenv import load_dotenv
+from google import genai as google_genai
+from google.genai import types as genai_types
 
 # Load environment variables
 load_dotenv()
 
-# Configure Gemini
-genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-gemini_model = genai.GenerativeModel('gemini-2.5-flash-lite')
+# Configure Gemini client via API key
+try:
+    VERTEX_MODEL_NAME = os.environ.get("VERTEX_MODEL", "gemini-2.5-flash-lite")
+    _api_key = os.environ.get("VERTEX_AI_API_KEY")
+    if not _api_key:
+        raise ValueError("VERTEX_AI_API_KEY not set")
+    pdf_llm_client = google_genai.Client(api_key=_api_key)
+    VERTEX_AI_AVAILABLE = True
+    print(f"✅ pdf_reader client initialized: model={VERTEX_MODEL_NAME}")
+except Exception as e:
+    pdf_llm_client = None
+    VERTEX_AI_AVAILABLE = False
+    print(f"❌ pdf_reader client initialization failed: {e}")
 
 
 def extract_text_from_pdf(pdf_path):
@@ -48,6 +59,7 @@ def extract_text_from_pdf(pdf_path):
                 page_text = page.get_text("text")
                 if page_text:
                     text += page_text + "\n"
+            doc.close()
         except Exception as e:
             print(f"PyMuPDF text extraction error: {e}")
 
@@ -85,12 +97,12 @@ def extract_text_from_pdf_images(pdf_path):
                     image_bytes = base_image["image"]
 
                     # Save image temporarily
-                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
                         temp_file.write(image_bytes)
                         temp_image_path = temp_file.name
 
                     try:
-                        # Run OCR on the extracted image
+                        # Run OCR on the extracted image (now uses OpenAI Vision)
                         image_text = extract_text_from_image(temp_image_path)
                         if image_text:
                             ocr_text += image_text + "\n"
@@ -155,13 +167,12 @@ def process_pdf_pages_with_llm(pdf_path):
                 img_data = pix.tobytes("png")
 
                 # Save image temporarily for OCR
-                with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
                     temp_file.write(img_data)
                     temp_image_path = temp_file.name
 
                 try:
-                    # Run OCR on the page image
-                    from modules.ocr_reader import extract_text_from_image
+                    # Run OCR on the page image (now uses OpenAI Vision)
                     ocr_text = extract_text_from_image(temp_image_path)
                     if ocr_text:
                         page_text += "\n" + ocr_text
@@ -172,7 +183,7 @@ def process_pdf_pages_with_llm(pdf_path):
                         os.unlink(temp_image_path)
 
             if page_text.strip():
-                # Send this page's text to LLM for analysis
+                # Send this page's text to LLM for analysis (now uses OpenAI)
                 page_data = analyze_pdf_page_with_llm(page_text, page_num + 1)
                 if page_data:
                     all_pages_data.append(page_data)
@@ -208,7 +219,11 @@ def process_pdf_pages_with_llm(pdf_path):
 
 
 def analyze_pdf_page_with_llm(page_text, page_number):
-    """Send individual PDF page text to LLM for page-specific analysis."""
+    """Send individual PDF page text to Vertex AI Gemini for page-specific analysis."""
+    if not VERTEX_AI_AVAILABLE or pdf_llm_client is None:
+        print(f"❌ Vertex AI not available for page {page_number} analysis")
+        return None
+
     try:
         page_prompt = f"""You are a Medical Document Analyzer. Analyze this single page from a medical report.
 
@@ -243,32 +258,30 @@ Rules:
 - Extract date in YYYY-MM-DD format only
 - Only include tests that appear on this specific page"""
 
-        response = gemini_model.generate_content(
-            page_prompt,
-            generation_config=genai.types.GenerationConfig(
+        response = pdf_llm_client.models.generate_content(
+            model=VERTEX_MODEL_NAME,
+            contents=page_prompt,
+            config=genai_types.GenerateContentConfig(
                 temperature=0.1,
                 max_output_tokens=1000,
             )
         )
 
         response_text = response.text.strip()
-
-        # Clean JSON
-        if response_text.startswith('```json'):
+        if response_text.startswith("```json"):
             response_text = response_text[7:]
-        if response_text.endswith('```'):
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
             response_text = response_text[:-3]
         response_text = response_text.strip()
 
-        # Parse and validate
         page_data = json.loads(response_text)
-
-        # Ensure page_number is correct
         page_data["page_number"] = page_number
 
-        print(f"📊 Page {page_number} LLM analysis complete")
+        print(f"📊 Page {page_number} LLM analysis complete (Vertex AI)")
         return page_data
 
     except Exception as e:
-        print(f"❌ Error analyzing page {page_number} with LLM: {e}")
+        print(f"❌ Error analyzing page {page_number} with Vertex AI: {e}")
         return None

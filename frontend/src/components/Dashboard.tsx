@@ -262,22 +262,7 @@ export default function Dashboard({ onFileUpload, onGoToReports, onGoToGoogleVis
               </p>
 
               {/* Fast Mode Toggle */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={fastMode}
-                    onChange={(e) => setFastMode(e.target.checked)}
-                    className="mr-3 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <div>
-                    <div className="text-sm font-medium text-blue-900">⚡ Fast Analysis Mode</div>
-                    <div className="text-xs text-blue-700">
-                      Skip AI analysis for quicker results (basic regex extraction only)
-                    </div>
-                  </div>
-                </label>
-              </div>
+            
 
               <label className="cursor-pointer">
                 <input

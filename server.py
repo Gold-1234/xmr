@@ -1,5 +1,3 @@
-import cloudinary
-import cloudinary.uploader
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -8,71 +6,31 @@ import re
 import json
 import uuid
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime
 import base64
 from main import analyze_report_api
-
-def btoa(s):
-    """Base64 encode a string (equivalent to JavaScript btoa)."""
-    return base64.b64encode(s.encode('utf-8')).decode('utf-8')
-from modules.database import (
-    save_medical_report, get_user_reports, get_report_details,
-    get_test_trends, delete_report, get_user_stats, supabase_admin, supabase, SUPABASE_AVAILABLE
-)
 from dotenv import load_dotenv
 from modules.analyzer import extract_dates_from_text_regex
+from openai import OpenAI # Import OpenAI
+
 # Load environment variables
 load_dotenv()
-import pytesseract
-import shutil
 
-# Google Cloud Vision imports
+# Initialize OpenAI client
 try:
-    from google.cloud import vision
-    from google.oauth2 import service_account
-    GOOGLE_VISION_AVAILABLE = True
-    print("✅ Google Cloud Vision imported successfully")
-except ImportError:
-    GOOGLE_VISION_AVAILABLE = False
-    print("❌ Google Cloud Vision not available - install with: pip install google-cloud-vision")
-
-print("Tesseract binary:", shutil.which("tesseract"))
-print("Tesseract version:", pytesseract.get_tesseract_version())
-
-# Configure Cloudinary only if credentials are valid
-cloudinary_url = os.getenv('CLOUDINARY_URL')
-cloudinary_configured = False
-
-print(f"Cloudinary URL from env: {cloudinary_url}")
-print(f"Full env CLOUDINARY_URL: {os.getenv('CLOUDINARY_URL')}")
-
-if cloudinary_url and '<your_api_key>' not in cloudinary_url and '<your_api_secret>' not in cloudinary_url:
-    try:
-        # Parse the URL manually to ensure correct configuration
-        from urllib.parse import urlparse
-        parsed = urlparse(cloudinary_url)
-        api_key = parsed.username
-        api_secret = parsed.password
-        cloud_name = parsed.hostname
-
-        cloudinary.config(
-            cloud_name=cloud_name,
-            api_key=api_key,
-            api_secret=api_secret
-        )
-        cloudinary_configured = True
-        print(f"Cloudinary configured successfully: {cloud_name}")
-    except Exception as e:
-        print(f"Cloudinary configuration failed: {e}")
-        cloudinary_configured = False
-else:
-    print("Cloudinary URL not valid or contains placeholders")
+    openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    OPENAI_AVAILABLE = True
+    print("✅ OpenAI client initialized successfully")
+except Exception as e:
+    OPENAI_AVAILABLE = False
+    openai_client = None
+    print(f"❌ OpenAI client initialization failed: {e}")
 
 app = Flask(__name__)
 CORS(app)
 
 # Get port from environment or default
-port = int(os.environ.get('PORT', 5002))
+port = int(os.environ.get('PORT', 5001))
 
 # Serve uploaded files
 @app.route('/uploads/<filename>')
@@ -113,39 +71,6 @@ def proxy_image():
         print(f"Proxy error: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/test-db')
-def test_db():
-    """Test database connection."""
-    try:
-        # Test with admin client
-        response = supabase_admin.table('medical_reports').select('count', count='exact').execute()
-        return jsonify({
-            'status': 'success',
-            'total_reports': response.count,
-            'message': 'Database connection working'
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
-
-@app.route('/test-users')
-def test_users():
-    """Test users table."""
-    try:
-        # Test users table
-        response = supabase_admin.table('users').select('count', count='exact').execute()
-        return jsonify({
-            'status': 'success',
-            'total_users': response.count,
-            'message': 'Users table accessible'
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
 
 @app.route('/upload', methods=['POST'])
 def upload_report():
@@ -188,37 +113,12 @@ def upload_report():
         # Set temp_file_path for analysis (use local file)
         temp_file_path = local_file_path
 
-        # Generate file URL
-        if cloudinary_configured:
-            try:
-                # Determine resource type based on file type
-                file_extension = os.path.splitext(secure_name)[1].lower()
-                if file_extension in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']:
-                    resource_type = "image"
-                elif file_extension == '.pdf':
-                    resource_type = "raw"
-                else:
-                    resource_type = "auto"  # Fallback for other file types
-
-                print(f"📁 Uploading file with extension {file_extension}, using resource_type: {resource_type}")
-
-                # Upload to Cloudinary for permanent storage
-                upload_result = cloudinary.uploader.upload(
-                    local_file_path,
-                    resource_type=resource_type,
-                    folder="medical_reports",
-                    ocr="adv_ocr"
-                )
-                file_url = upload_result['secure_url']
-                print(f"☁️ File uploaded to Cloudinary: {file_url}")
-                print(f"📊 Complete Cloudinary Response:")
-                print(json.dumps(upload_result, indent=2, default=str))
-            except Exception as cloudinary_error:
-                print(f"⚠️ Cloudinary upload failed: {cloudinary_error}")
-                # Fallback to local URL
-                file_url = f"http://localhost:{port}/uploads/{secure_name}"
-        else:
-            file_url = f"http://localhost:{port}/uploads/{secure_name}"
+        file_url = f"http://localhost:{port}/uploads/{secure_name}"
+        # Save the URL to a local file
+        with open("uploaded_urls.txt", "a") as f:
+            f.write(f"{file_url}\n")
+        
+        file_extension = os.path.splitext(secure_name)[1].lower()
 
         try:
             # Check if this is a text file
@@ -337,139 +237,14 @@ def upload_report():
 
             return jsonify(result)
         finally:
-            # Clean up temporary file if it was created for Cloudinary
-            if cloudinary_configured and 'temp_file_path' in locals():
-                os.unlink(temp_file_path)
+            # Clean up temporary file
+            if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
+                # os.unlink(temp_file_path) # Keep file for local access
+                pass
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/save-report', methods=['POST'])
-def save_report():
-    """Save analyzed report to database with Cloudinary upload."""
-    data = request.get_json()
-
-    required_fields = ['userId', 'filename', 'fileType', 'fileUrl', 'patient', 'tests']
-    for field in required_fields:
-        if field not in data:
-            return jsonify({'error': f'Missing required field: {field}'}), 400
-
-    try:
-        # Check if file exists locally (from initial upload)
-        local_file_path = None
-        if data['fileUrl'].startswith('http://localhost'):
-            # Extract filename from URL
-            filename = data['fileUrl'].split('/')[-1]
-            local_file_path = os.path.join('uploads', filename)
-
-        # Upload to Cloudinary if configured and file exists
-        final_file_url = data['fileUrl']
-        if cloudinary_configured and local_file_path and os.path.exists(local_file_path):
-            try:
-                # Determine resource type based on file type
-                file_extension = os.path.splitext(data['filename'])[1].lower()
-                if file_extension in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']:
-                    resource_type = "image"
-                elif file_extension == '.pdf':
-                    resource_type = "raw"
-                else:
-                    resource_type = "auto"  # Fallback for other file types
-
-                print(f"📁 Uploading file with extension {file_extension}, using resource_type: {resource_type}")
-
-                # Upload file to Cloudinary
-                upload_result = cloudinary.uploader.upload(
-                    local_file_path,
-                    resource_type=resource_type,
-                    folder="medical_reports",
-                    public_id=f"{data['userId']}_{data['filename']}_{int(os.path.getctime(local_file_path))}"
-                )
-                final_file_url = upload_result['secure_url']
-                print(f"File uploaded to Cloudinary: {final_file_url}")
-                print(f"📊 Complete Cloudinary Response (save-report):")
-                print(json.dumps(upload_result, indent=2, default=str))
-
-                # Remove local file after successful Cloudinary upload
-                os.unlink(local_file_path)
-
-            except Exception as cloudinary_error:
-                print(f"Cloudinary upload failed: {cloudinary_error}")
-                # Keep local URL if Cloudinary fails
-
-        # Save to database with final file URL
-        result = save_medical_report(
-            user_id=data['userId'],
-            filename=data['filename'],
-            file_type=data['fileType'],
-            file_url=final_file_url,
-            patient_info=data['patient'],
-            test_results=data['tests']
-        )
-
-        if result['success']:
-            return jsonify({'success': True, 'report_id': result['report_id'], 'file_url': final_file_url})
-        else:
-            return jsonify({'error': result['error']}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/reports/<user_id>', methods=['GET'])
-def get_reports(user_id):
-    """Get user's saved reports."""
-    try:
-        limit = int(request.args.get('limit', 50))
-        offset = int(request.args.get('offset', 0))
-
-        reports = get_user_reports(user_id, limit, offset)
-        return jsonify({'reports': reports})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/report/<report_id>', methods=['GET'])
-def get_report(report_id):
-    """Get detailed report information."""
-    try:
-        report = get_report_details(report_id)
-        if report:
-            return jsonify(report)
-        else:
-            return jsonify({'error': 'Report not found'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/report/<report_id>', methods=['DELETE'])
-def delete_user_report(report_id):
-    """Delete a user's report."""
-    user_id = request.args.get('user_id')
-    if not user_id:
-        return jsonify({'error': 'user_id parameter required'}), 400
-
-    try:
-        success = delete_report(report_id, user_id)
-        if success:
-            return jsonify({'success': True})
-        else:
-            return jsonify({'error': 'Failed to delete report'}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/trends/<user_id>/<test_name>', methods=['GET'])
-def get_trends(user_id, test_name):
-    """Get trend data for a specific test."""
-    try:
-        trends = get_test_trends(user_id, test_name)
-        return jsonify({'trends': trends})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/stats/<user_id>', methods=['GET'])
-def get_stats(user_id):
-    """Get user statistics."""
-    try:
-        stats = get_user_stats(user_id)
-        return jsonify(stats)
-    except Exception as e:
-        return jsonify({'error': str(e)})
 
 @app.route('/download-txt', methods=['POST'])
 def download_txt():
@@ -525,9 +300,9 @@ def download_txt():
 
 @app.route('/extract-pdf-info', methods=['POST'])
 def extract_pdf_info():
-    """Extract date and report type from PDF using Google Cloud Vision OCR."""
-    if not GOOGLE_VISION_AVAILABLE:
-        return jsonify({'error': 'Google Cloud Vision not available. Install with: pip install google-cloud-vision'}), 500
+    """Extract date and report type from PDF using OpenAI OCR."""
+    if not OPENAI_AVAILABLE:
+        return jsonify({'error': 'OpenAI not available. Check OPENAI_API_KEY'}), 500
 
     file = request.files.get('file')
     if not file:
@@ -544,85 +319,44 @@ def extract_pdf_info():
         file.save(local_file_path)
         print(f"📄 PDF saved locally: {local_file_path}")
 
-        # Initialize Google Cloud Vision client
-        google_credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-        if google_credentials_path and os.path.exists(google_credentials_path):
-            credentials = service_account.Credentials.from_service_account_file(google_credentials_path)
-            client = vision.ImageAnnotatorClient(credentials=credentials)
-            print("✅ Google Cloud Vision client initialized with service account")
-        else:
-            # Try with API key (less secure but simpler)
-            api_key = os.getenv('GOOGLE_VISION_API_KEY')
-            if api_key:
-                import google.auth.transport.requests
-                import google.auth
-                # This is a simplified approach - in production, use service account
-                client = vision.ImageAnnotatorClient()
-                print("✅ Google Cloud Vision client initialized")
-            else:
-                return jsonify({'error': 'Google Cloud Vision credentials not configured. Set GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_VISION_API_KEY'}), 500
+        # Use the page-by-page processing with OpenAI LLM
+        from modules.pdf_reader import process_pdf_pages_with_llm
+        page_result = process_pdf_pages_with_llm(local_file_path)
 
-        # Convert PDF pages to images
-        import fitz  # PyMuPDF
-        doc = fitz.open(local_file_path)
-        print(f"📖 Processing PDF with {len(doc)} pages")
+        if not page_result:
+            return jsonify({'error': 'Failed to process PDF with OpenAI'}), 500
 
+        # Convert the result to a format suitable for the frontend
         extracted_info = {
             'pages': [],
             'dates': [],
             'report_types': [],
             'all_text': ''
         }
+        all_dates = []
+        all_report_types = []
+        full_text = []
 
-        for page_num in range(len(doc)):
-            print(f"📄 Processing page {page_num + 1}")
+        for page_data in page_result.get("pages", []):
+            page_text = "" # Reconstruct text if needed, or get from source
+            page_dates = [page_data.get("date")] if page_data.get("date") else []
+            report_types = extract_report_types(page_text)
 
-            # Convert page to image
-            page = doc.load_page(page_num)
-            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2x scaling for better OCR
-            img_data = pix.tobytes("png")
+            extracted_info['pages'].append({
+                'page_number': page_data.get("page_number"),
+                'text': page_text,
+                'dates': page_dates,
+                'report_types': report_types
+            })
+            all_dates.extend(page_dates)
+            all_report_types.extend(report_types)
+            full_text.append(page_text)
 
-            # Create Vision API image object
-            image = vision.Image(content=img_data)
+        extracted_info['dates'] = sorted(list(set(all_dates)), reverse=True)
+        extracted_info['report_types'] = list(set(all_report_types))
+        extracted_info['all_text'] = "\n".join(full_text)
 
-            # Perform text detection
-            response = client.text_detection(image=image)
-            texts = response.text_annotations
-
-            if texts:
-                page_text = texts[0].description
-                print(f"✅ OCR successful on page {page_num + 1} ({len(page_text)} chars)")
-                print("page_text:::", page_text)
-                # Extract dates from this page
-                page_dates = extract_dates_from_text_regex(page_text)
-                if page_dates:
-                    print(f"📅 Found dates on page {page_num + 1}: {page_dates}")
-
-                # Extract report type patterns
-                report_types = extract_report_types(page_text)
-
-                extracted_info['pages'].append({
-                    'page_number': page_num + 1,
-                    'text': page_text,
-                    # 'dates': page_dates,
-                    'report_types': report_types
-                })
-
-                extracted_info['dates'].extend(page_dates)
-                extracted_info['report_types'].extend(report_types)
-                extracted_info['all_text'] += page_text + '\n'
-            else:
-                print(f"❌ No text found on page {page_num + 1}")
-
-        doc.close()
-
-        # Remove duplicates and sort
-        extracted_info['dates'] = list(set(extracted_info['dates']))
-        extracted_info['dates'].sort(reverse=True)  # Most recent first
-
-        extracted_info['report_types'] = list(set(extracted_info['report_types']))
-
-        print("🏁 PDF processing complete")
+        print("🏁 PDF processing complete with OpenAI")
         print(f"📅 Total unique dates found: {len(extracted_info['dates'])}")
         print(f"📋 Report types found: {extracted_info['report_types']}")
 
@@ -633,7 +367,7 @@ def extract_pdf_info():
         return jsonify(extracted_info)
 
     except Exception as e:
-        print(f"❌ Error in Google Cloud Vision processing: {e}")
+        print(f"❌ Error in OpenAI PDF processing: {e}")
         return jsonify({'error': str(e)}), 500
 
 def generate_test_results_txt(result):
@@ -907,6 +641,8 @@ def extract_report_types(text):
 
     return list(set(report_types))  # Remove duplicates
 
+
+
 @app.route('/auth/login', methods=['POST'])
 def login():
     """Direct login - create user with email and return user ID."""
@@ -917,46 +653,12 @@ def login():
             return jsonify({'error': 'Email is required'}), 400
 
         email = data['email']
-        password = data.get('password', 'default123')  # Optional password
-
-        # Check if user already exists
-        existing_user = None
-        if SUPABASE_AVAILABLE:
-            try:
-                existing_users = supabase_admin.table('users').select('id, email').eq('email', email).execute()
-                if existing_users.data and len(existing_users.data) > 0:
-                    existing_user = existing_users.data[0]
-                    print(f"✅ Found existing user: {existing_user['id']} ({existing_user['email']})")
-            except Exception as e:
-                print(f"⚠️ Error checking for existing user: {e}")
-
-        if existing_user:
-            # Use existing user ID
-            user_id = existing_user['id']
-            print(f"✅ Using existing user ID: {user_id}")
-        else:
-            # Generate a unique user ID based on email (deterministic)
-            import hashlib
-            # Create a UUID from the first 16 bytes of the MD5 hash
-            email_hash = hashlib.md5(email.encode()).digest()
-            user_id = str(uuid.UUID(bytes=email_hash[:16]))
-
-            # Hash the password
-            password_hash = btoa(password)
-
-            # Create new user in database
-            if SUPABASE_AVAILABLE:
-                try:
-                    user_data = {
-                        'id': user_id,
-                        'email': email,
-                        'password_hash': password_hash
-                    }
-                    supabase_admin.table('users').insert(user_data).execute()
-                    print(f"✅ User created in database: {user_id} ({email})")
-                except Exception as db_error:
-                    print(f"⚠️ Failed to create user in database: {db_error}")
-                    # Continue anyway for development
+        
+        # Generate a unique user ID based on email (deterministic)
+        import hashlib
+        # Create a UUID from the first 16 bytes of the MD5 hash
+        email_hash = hashlib.md5(email.encode()).digest()
+        user_id = str(uuid.UUID(bytes=email_hash[:16]))
 
         # Return user data directly (no OTP needed)
         print(f"✅ User authenticated: {email} -> {user_id}")
@@ -973,50 +675,6 @@ def login():
     except Exception as e:
         print(f"Login error: {e}")
         return jsonify({'error': str(e)}), 500
-
-
-@app.route('/auth/verify-otp', methods=['POST'])
-def verify_otp():
-    """Verify OTP for authentication - backend implementation of Supabase function."""
-    try:
-        data = request.get_json()
-
-        if not data or not data.get('email') or not data.get('otp'):
-            return jsonify({'error': 'Email and OTP are required'}), 400
-
-        email = data['email']
-        otp = data['otp']
-
-        # Find valid OTP record
-        otp_record = supabase_admin.table('otp_codes').select('*').eq('email', email).eq('code', otp).eq('verified', False).order('created_at', desc=True).execute()
-
-        if not otp_record.data or len(otp_record.data) == 0:
-            return jsonify({'error': 'Invalid OTP'}), 401
-
-        otp_data = otp_record.data[0]
-
-        # Check expiration
-        if datetime.now() > datetime.fromisoformat(otp_data['expires_at']):
-            return jsonify({'error': 'OTP has expired'}), 401
-
-        # Mark OTP as verified
-        supabase_admin.table('otp_codes').update({'verified': True}).eq('id', otp_data['id']).execute()
-
-        # Get user data
-        user_result = supabase_admin.table('users').select('id, email').eq('id', otp_data['user_id']).execute()
-
-        if not user_result.data or len(user_result.data) == 0:
-            return jsonify({'error': 'User not found'}), 404
-
-        return jsonify({
-            'success': True,
-            'user': user_result.data[0]
-        })
-
-    except Exception as e:
-        print(f"Verify OTP error: {e}")
-        return jsonify({'error': str(e)}), 500
-
 
 @app.route('/voice-chat', methods=['POST'])
 def voice_chat():
@@ -1129,34 +787,11 @@ USER QUESTION: {user_message}
 
 Please provide helpful general health information and wellness tips. If the question involves specific medical symptoms, conditions, or test results, politely remind the user to consult with a healthcare professional."""
 
-        # Try Gemini first, fallback to OpenAI
+        # Use OpenAI
         response_text = ""
-
-        if os.getenv('GEMINI_API_KEY'):
+        if OPENAI_AVAILABLE:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-                gemini_model = genai.GenerativeModel('gemini-2.5-flash-lite')
-
-                response = gemini_model.generate_content(
-                    conversation_prompt,
-                    generation_config=genai.types.GenerationConfig(
-                        temperature=0.7,  # More creative for conversation
-                        max_output_tokens=500,
-                    )
-                )
-                response_text = response.text.strip()
-
-            except Exception as e:
-                print(f"Gemini voice chat failed: {e}")
-
-        # Fallback to OpenAI
-        if not response_text and os.getenv('OPENAI_API_KEY'):
-            try:
-                from openai import OpenAI
-                client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-
-                response = client.chat.completions.create(
+                response = openai_client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
                         {"role": "system", "content": system_prompt},
@@ -1170,6 +805,8 @@ Please provide helpful general health information and wellness tips. If the ques
             except Exception as e:
                 print(f"OpenAI voice chat failed: {e}")
                 response_text = "I'm sorry, I'm having trouble accessing the medical information right now. Please try again or consult with your healthcare provider."
+        else:
+            response_text = "The AI service is currently unavailable. Please try again later."
 
         return jsonify({
             'response': response_text,
@@ -1181,6 +818,5 @@ Please provide helpful general health information and wellness tips. If the ques
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    port = 5002  # Hardcoded for now
     print(f"Starting server on port {port}")
-    app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
+    app.run(debug=True, host='0.0.0.0', port=port, threaded=True)

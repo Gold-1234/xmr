@@ -2,20 +2,31 @@ import os
 import json
 import re
 from datetime import datetime
-from openai import OpenAI
-import google.generativeai as genai
+from google import genai as google_genai
+from google.genai import types as genai_types
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Configure APIs
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-gemini_model = genai.GenerativeModel('gemini-2.5-flash-lite')
+VERTEX_MODEL_NAME = os.environ.get("VERTEX_MODEL", "gemini-2.5-flash-lite")
+
+try:
+    _api_key = os.environ.get("VERTEX_AI_API_KEY")
+    if not _api_key:
+        raise ValueError("VERTEX_AI_API_KEY not set")
+    gemini_client = google_genai.Client(api_key=_api_key)
+    VERTEX_AI_AVAILABLE = True
+    print(f"✅ Gemini client initialized: model={VERTEX_MODEL_NAME}")
+except Exception as e:
+    gemini_client = None
+    VERTEX_AI_AVAILABLE = False
+    print(f"❌ Gemini client initialization failed: {e}")
 
 def extract_medical_data_gemini(text):
-    """Use Gemini to extract structured medical data from report text."""
+    """Use Vertex AI Gemini to extract structured medical data from report text."""
+    if not VERTEX_AI_AVAILABLE:
+        raise Exception("Vertex AI is not available")
     try:
         # Truncate text if too long to avoid token limits
         if len(text) > 3000:
@@ -62,10 +73,11 @@ If a field is missing, use null."""
 REPORT TEXT:
 """ + text
 
-        response = gemini_model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.1,  # Low temperature for consistent extraction
+        response = gemini_client.models.generate_content(
+            model=VERTEX_MODEL_NAME,
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(
+                temperature=0.1,
                 max_output_tokens=1000,
             )
         )
@@ -106,7 +118,7 @@ REPORT TEXT:
 
                 if last_valid_pos > 0:
                     fixed_response = response_text[:last_valid_pos + 1]
-                    print(f"Trying to parse truncated JSON (length: {len(fixed_response)}")
+                    print(f"Trying to parse truncated JSON (length: {len(fixed_response)})")
                     return json.loads(fixed_response)
                 else:
                     raise json_err
@@ -121,87 +133,33 @@ REPORT TEXT:
 
 
 
-def extract_medical_data_openai(text):
-    """Use OpenAI to extract structured medical data from report text."""
-    # Truncate text if too long to avoid token limits
-    if len(text) > 3000:
-        text = text[:3000] + "...[TRUNCATED]"
-
-    prompt = """Extract lab test data from this medical report. Return ONLY valid JSON.
-
-SCHEMA:
-{
-  "patient": {"name": null, "age": null, "gender": null},
-  "tests": [
-    {"test_name": "", "value": "", "unit": null, "reference_range": null, "interpretation": "Unknown"}
-  ]
-}
-
-INSTRUCTIONS:
-- Extract patient name, age, gender if present
-- Find all test results with names, values, units, reference ranges
-- Determine if each result is Low/Normal/High based on reference ranges
-- Return valid JSON only, no explanations
-- Limit to maximum 20 tests
-- Keep test names concise (e.g., "Hemoglobin", not "Hemoglobin (Hb)")
-
-REPORT TEXT:
-""" + text
+def _parse_llm_json(response_text):
+    """Helper to clean and parse JSON from LLM responses."""
+    if response_text.startswith('```json'):
+        response_text = response_text[7:]
+    if response_text.startswith('```'):
+        response_text = response_text[3:]
+    if response_text.endswith('```'):
+        response_text = response_text[:-3]
+    response_text = response_text.strip()
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",  # Using GPT-4o-mini for cost efficiency
-            messages=[
-                {"role": "system", "content": "You are a medical data extraction assistant. Return only valid JSON."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1,  # Low temperature for consistent extraction
-            max_tokens=1000
-        )
+        return json.loads(response_text)
+    except json.JSONDecodeError as json_err:
+        # Try to find the last complete JSON object
+        brace_count = 0
+        last_valid_pos = -1
+        for i, char in enumerate(response_text):
+            if char == '{':
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0:
+                    last_valid_pos = i
+        if last_valid_pos > 0:
+            return json.loads(response_text[:last_valid_pos + 1])
+        raise json_err
 
-        response_text = response.choices[0].message.content.strip()
-
-        # Clean the response to get valid JSON
-        if response_text.startswith('```json'):
-            response_text = response_text[7:]
-        if response_text.endswith('```'):
-            response_text = response_text[:-3]
-        response_text = response_text.strip()
-
-        # Try to fix common JSON issues
-        try:
-            return json.loads(response_text)
-        except json.JSONDecodeError as json_err:
-            print(f"Initial JSON parsing failed: {json_err}")
-            print(f"Response text (first 500 chars): {response_text[:500]}")
-
-            # Try to fix unterminated strings by finding the last complete object
-            try:
-                # Look for the last complete JSON object by counting braces
-                brace_count = 0
-                last_valid_pos = -1
-
-                for i, char in enumerate(response_text):
-                    if char == '{':
-                        brace_count += 1
-                    elif char == '}':
-                        brace_count -= 1
-                        if brace_count == 0:
-                            last_valid_pos = i
-
-                if last_valid_pos > 0:
-                    fixed_response = response_text[:last_valid_pos + 1]
-                    print(f"Trying to parse truncated JSON (length: {len(fixed_response)})")
-                    return json.loads(fixed_response)
-                else:
-                    raise json_err
-
-            except Exception as fix_err:
-                print(f"JSON fixing also failed: {fix_err}")
-                raise json_err
-    except Exception as e:
-        print(f"OpenAI extraction failed: {e}")
-        raise e
 
 def get_age_based_reference_ranges(test_name, age=None):
     """Get age-based reference ranges for common medical tests."""
@@ -411,41 +369,31 @@ def convert_new_llm_format_to_legacy(llm_response):
     }
 
 def extract_medical_data(text, user_profile=None):
-    """Extract medical data using page-based Gemini extraction."""
-    if os.getenv('GEMINI_API_KEY'):
-        try:
-            # Use page-based extraction for better date derivation per page
-            data = extract_medical_data_page_based(text)
-            print(f"Raw LLM response type: {type(data)}")
-            if isinstance(data, list):
-                print(f"LLM returned array with {len(data)} entries")
-            elif isinstance(data, dict):
-                print(f"LLM returned dict with keys: {list(data.keys())}")
-        except Exception as e:
-            print(f"Page-based Gemini extraction failed, falling back to document-level: {e}")
-            try:
-                data = extract_medical_data_gemini(text)
-            except Exception as e2:
-                print(f"Document-level extraction also failed: {e2}")
-                if os.getenv('OPENAI_API_KEY'):
-                    try:
-                        data = extract_medical_data_openai(text)
-                    except Exception as e3:
-                        print(f"OpenAI extraction also failed: {e3}")
-                        return {"patient": {"name": None, "age": None, "gender": None}, "tests": []}
-                else:
-                    return {"patient": {"name": None, "age": None, "gender": None}, "tests": []}
-    elif os.getenv('OPENAI_API_KEY'):
-        try:
-            data = extract_medical_data_openai(text)
-        except Exception as e:
-            print(f"OpenAI extraction failed: {e}")
-            return {"patient": {"name": None, "age": None, "gender": None}, "tests": []}
-    else:
+    """Extract medical data using Vertex AI."""
+    data = None
+    if not VERTEX_AI_AVAILABLE:
+        print("❌ Vertex AI not available — returning empty result")
         return {"patient": {"name": None, "age": None, "gender": None}, "tests": []}
 
-    # Convert page-based format to legacy format if needed
-    data = convert_page_based_to_legacy(data)
+    try:
+        data = extract_medical_data_gemini(text)
+        print(f"Raw LLM response type: {type(data)}")
+        if isinstance(data, list):
+            print(f"LLM returned array with {len(data)} entries")
+        elif isinstance(data, dict):
+            print(f"LLM returned dict with keys: {list(data.keys())}")
+    except Exception as e:
+        print(f"Vertex AI extraction failed: {e}")
+        return {"patient": {"name": None, "age": None, "gender": None}, "tests": []}
+
+    if data is None:
+        return {"patient": {"name": None, "age": None, "gender": None}, "tests": []}
+
+    # Normalise whichever format the LLM returned to the legacy patient/tests dict
+    if isinstance(data, list):
+        data = convert_new_llm_format_to_legacy(data)
+    elif isinstance(data, dict) and 'pages' in data:
+        data = convert_page_based_to_legacy(data)
 
     # Get patient age for reference ranges
     patient_age = None
@@ -505,10 +453,11 @@ Format your response as a JSON object where each key is the test name and the va
 Return only the JSON, no markdown formatting."""
 
     try:
-        response = gemini_model.generate_content(
-            batch_prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.3,  # Slightly higher temperature for explanations
+        response = gemini_client.models.generate_content(
+            model=VERTEX_MODEL_NAME,
+            contents=batch_prompt,
+            config=genai_types.GenerateContentConfig(
+                temperature=0.3,
                 max_output_tokens=2000,
             )
         )
@@ -539,74 +488,6 @@ Return only the JSON, no markdown formatting."""
 
     return tests
 
-def generate_test_explanations_openai(tests):
-    """Generate explanations for each test using OpenAI."""
-    if not tests:
-        return tests
-
-    # Create a batch prompt for all tests with context
-    test_details = []
-    for test in tests:
-        test_info = f"{test['test_name']}: value={test['value']} {test.get('unit', '')}, interpretation={test['interpretation']}"
-        if test.get('reference_range'):
-            test_info += f", reference_range={test['reference_range']}"
-        test_details.append(test_info)
-
-    batch_prompt = f"""Provide context-aware explanations for each of these medical tests based on the patient's specific values and interpretations. For each test, explain:
-
-1. What the test measures
-2. What the patient's specific result means in context
-3. Any health implications of the result
-
-Be specific about the patient's values and whether they are normal, high, or low. Keep each explanation to 2-3 sentences.
-
-Test Results:
-{chr(10).join(f"- {detail}" for detail in test_details)}
-
-Format your response as a JSON object where each key is the test name and the value is the explanation:
-{{
-  "Test Name 1": "Explanation here...",
-  "Test Name 2": "Explanation here...",
-  ...
-}}
-"""
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a medical expert providing test explanations. Return only valid JSON."},
-                {"role": "user", "content": batch_prompt}
-            ],
-            temperature=0.3,  # Slightly higher temperature for explanations
-            max_tokens=2000
-        )
-
-        response_text = response.choices[0].message.content.strip()
-
-        # Clean the response to get valid JSON
-        if response_text.startswith('```json'):
-            response_text = response_text[7:]
-        if response_text.endswith('```'):
-            response_text = response_text[:-3]
-        response_text = response_text.strip()
-
-        # Parse the JSON response
-        explanations = json.loads(response_text)
-
-        # Assign explanations to tests
-        for test in tests:
-            test_name = test['test_name']
-            if test_name in explanations:
-                test['explanation'] = explanations[test_name]
-            else:
-                test['explanation'] = f"This test measures {test_name} levels in the body."
-
-    except Exception as e:
-        print(f"OpenAI explanations failed: {e}")
-        raise e
-
-    return tests
 
 def generate_personalized_analysis(tests, user_profile=None, tests_by_date=None, date_order=None):
     """Generate personalized analysis with test explanations and health recommendations using single LLM call."""
@@ -701,106 +582,39 @@ FORMAT YOUR RESPONSE AS JSON:
 Return only the JSON, no markdown formatting."""
 
     try:
-        # Try Gemini first
-        if os.getenv('GEMINI_API_KEY'):
-            response = gemini_model.generate_content(
-                comprehensive_prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.4,  # Moderate temperature for personalized analysis
-                    max_output_tokens=3000,
-                )
+        if not VERTEX_AI_AVAILABLE:
+            raise Exception("Vertex AI not available")
+
+        response = gemini_client.models.generate_content(
+            model=VERTEX_MODEL_NAME,
+            contents=comprehensive_prompt,
+            config=genai_types.GenerateContentConfig(
+                temperature=0.4,
+                max_output_tokens=3000,
             )
+        )
 
-            response_text = response.text.strip()
+        response_text = response.text.strip()
+        print(f"DEBUG: Vertex AI response length: {len(response_text)}")
 
-            # Clean the response to get valid JSON
-            if response_text.startswith('```json'):
-                response_text = response_text[7:]
-            if response_text.endswith('```'):
-                response_text = response_text[:-3]
-            response_text = response_text.strip()
+        analysis = _parse_llm_json(response_text)
+        print(f"DEBUG: Parsed analysis keys: {list(analysis.keys())}")
 
-            # Parse the comprehensive analysis
-            print(f"DEBUG: Gemini response text length: {len(response_text)}")
-            print(f"DEBUG: Gemini response starts with: {response_text[:200]}...")
+        explanations = analysis.get('test_explanations', {})
+        for test in tests:
+            test_name = test['test_name']
+            test['explanation'] = explanations.get(test_name, f"This test measures {test_name} levels in your body.")
 
-            analysis = json.loads(response_text)
-            print(f"DEBUG: Parsed analysis keys: {list(analysis.keys())}")
+        if tests:
+            tests[0]['health_summary'] = analysis.get('health_summary', '')
+            tests[0]['concerning_findings'] = analysis.get('concerning_findings', [])
+            tests[0]['dietary_recommendations'] = analysis.get('dietary_recommendations', [])
+            tests[0]['lifestyle_recommendations'] = analysis.get('lifestyle_recommendations', [])
 
-            # Assign explanations to tests
-            explanations = analysis.get('test_explanations', {})
-            print(f"DEBUG: Found {len(explanations)} test explanations")
-
-            for test in tests:
-                test_name = test['test_name']
-                if test_name in explanations:
-                    test['explanation'] = explanations[test_name]
-                    print(f"DEBUG: Set explanation for {test_name}")
-                else:
-                    test['explanation'] = f"This test measures {test_name} levels in your body."
-
-            # Add summary and recommendations to the first test or create a summary field
-            if tests:
-                tests[0]['health_summary'] = analysis.get('health_summary', '')
-                tests[0]['concerning_findings'] = analysis.get('concerning_findings', [])
-                tests[0]['dietary_recommendations'] = analysis.get('dietary_recommendations', [])
-                tests[0]['lifestyle_recommendations'] = analysis.get('lifestyle_recommendations', [])
-
-                print(f"DEBUG: Added summary: {bool(tests[0].get('health_summary'))}")
-                print(f"DEBUG: Added concerning findings: {len(tests[0].get('concerning_findings', []))}")
-                print(f"DEBUG: Added dietary recs: {len(tests[0].get('dietary_recommendations', []))}")
-                print(f"DEBUG: Added lifestyle recs: {len(tests[0].get('lifestyle_recommendations', []))}")
-
-            return tests
+        return tests
 
     except Exception as e:
-        print(f"Gemini personalized analysis failed: {e}")
-
-    # Fallback to OpenAI
-    try:
-        if os.getenv('OPENAI_API_KEY'):
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a medical expert providing personalized health analysis. Return only valid JSON."},
-                    {"role": "user", "content": comprehensive_prompt}
-                ],
-                temperature=0.4,  # Moderate temperature for personalized analysis
-                max_tokens=3000
-            )
-
-            response_text = response.choices[0].message.content.strip()
-
-            # Clean the response to get valid JSON
-            if response_text.startswith('```json'):
-                response_text = response_text[7:]
-            if response_text.endswith('```'):
-                response_text = response_text[:-3]
-            response_text = response_text.strip()
-
-            # Parse the comprehensive analysis
-            analysis = json.loads(response_text)
-
-            # Assign explanations to tests
-            explanations = analysis.get('test_explanations', {})
-            for test in tests:
-                test_name = test['test_name']
-                if test_name in explanations:
-                    test['explanation'] = explanations[test_name]
-                else:
-                    test['explanation'] = f"This test measures {test_name} levels in your body."
-
-            # Add summary and recommendations to the first test
-            if tests:
-                tests[0]['health_summary'] = analysis.get('health_summary', '')
-                tests[0]['concerning_findings'] = analysis.get('concerning_findings', [])
-                tests[0]['dietary_recommendations'] = analysis.get('dietary_recommendations', [])
-                tests[0]['lifestyle_recommendations'] = analysis.get('lifestyle_recommendations', [])
-
-            return tests
-
-    except Exception as e:
-        print(f"OpenAI personalized analysis also failed: {e}")
+        print(f"Vertex AI personalized analysis failed: {e}")
 
     # Final fallback: use basic explanations
     for test in tests:
@@ -814,23 +628,15 @@ Return only the JSON, no markdown formatting."""
     return tests
 
 def generate_test_explanations(tests):
-    """Generate test explanations using Gemini primary, OpenAI fallback."""
+    """Generate test explanations using Vertex AI."""
     if not tests:
         return tests
 
-    if os.getenv('GEMINI_API_KEY'):
-        try:
-            return generate_test_explanations_gemini(tests)
-        except Exception as e:
-            print(f"Gemini explanations failed, falling back to OpenAI: {e}")
+    try:
+        return generate_test_explanations_gemini(tests)
+    except Exception as e:
+        print(f"Vertex AI explanations failed: {e}")
 
-    if os.getenv('OPENAI_API_KEY'):
-        try:
-            return generate_test_explanations_openai(tests)
-        except Exception as e:
-            print(f"OpenAI explanations also failed: {e}")
-
-    # Final fallback: assign generic explanations
     for test in tests:
         test['explanation'] = f"This test measures {test['test_name']} levels in the body."
 
@@ -978,12 +784,12 @@ Report text:
 Return ONLY the JSON array, no explanations."""
 
     try:
-        # Try Gemini first
-        if os.getenv('GEMINI_API_KEY'):
-            response = gemini_model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.1,  # Low temperature for consistent extraction
+        if VERTEX_AI_AVAILABLE:
+            response = gemini_client.models.generate_content(
+                model=VERTEX_MODEL_NAME,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
+                    temperature=0.1,
                     max_output_tokens=500,
                 )
             )
@@ -1278,3 +1084,115 @@ def display_analysis(results):
             if test.get('explanation'):
                 print(f"Explanation: {test['explanation']}")
             print()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

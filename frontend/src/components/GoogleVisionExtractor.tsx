@@ -13,7 +13,7 @@ interface ExtractedInfo {
   all_text: string;
 }
 
-const GoogleVisionExtractor: React.FC = () => {
+const OpenAIExtractor: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo | null>(null);
@@ -72,7 +72,7 @@ const GoogleVisionExtractor: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-        Google Cloud Vision PDF Extractor
+        OpenAI PDF Extractor
       </h2>
 
       <div className="space-y-6">
@@ -91,7 +91,7 @@ const GoogleVisionExtractor: React.FC = () => {
               {selectedFile ? selectedFile.name : 'Click to select a PDF file'}
             </p>
             <p className="text-sm text-gray-500">
-              Only PDF files are supported for Google Cloud Vision processing
+              Only PDF files are supported for OpenAI processing
             </p>
           </label>
         </div>
@@ -119,7 +119,7 @@ const GoogleVisionExtractor: React.FC = () => {
           {extracting ? (
             <>
               <Loader2 className="animate-spin w-5 h-5" />
-              <span>Processing PDF with Google Cloud Vision...</span>
+              <span>Processing PDF with OpenAI...</span>
             </>
           ) : (
             <>
@@ -281,12 +281,12 @@ const GoogleVisionExtractor: React.FC = () => {
           <ol className="text-blue-700 text-sm space-y-1 list-decimal list-inside">
             <li>Upload a PDF medical report</li>
             <li>Each page is converted to an image</li>
-            <li>Google Cloud Vision OCR extracts text from each page</li>
-            <li>AI analyzes the text to identify dates and medical report types</li>
+            <li>OpenAI Vision OCR extracts text from each page</li>
+            <li>OpenAI's AI analyzes the text to identify dates and medical report types</li>
             <li>Results are aggregated and displayed with page-by-page breakdown</li>
           </ol>
           <p className="text-xs text-blue-600 mt-2">
-            Note: Requires Google Cloud Vision API credentials to be configured on the server.
+            Note: Requires OpenAI API credentials to be configured on the server.
           </p>
         </div>
       </div>
@@ -294,4 +294,4 @@ const GoogleVisionExtractor: React.FC = () => {
   );
 };
 
-export default GoogleVisionExtractor;
+export default OpenAIExtractor;

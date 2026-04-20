@@ -8,6 +8,7 @@ flask-cors
 cffi
 openai
 google-generativeai
+google-cloud-aiplatform
 python-dotenv
 supabase
 cloudinary
@@ -15,3 +16,5 @@ requests
 gunicorn
 livekit-agents[silero,turn-detector]
 livekit-plugins-noise-cancellation
+av==17.0.0
+pytesseract==0.3.13
