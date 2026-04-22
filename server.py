@@ -11,20 +11,8 @@ import base64
 from main import analyze_report_api
 from dotenv import load_dotenv
 from modules.analyzer import extract_dates_from_text_regex
-from openai import OpenAI # Import OpenAI
-
 # Load environment variables
 load_dotenv()
-
-# Initialize OpenAI client
-try:
-    openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    OPENAI_AVAILABLE = True
-    print("✅ OpenAI client initialized successfully")
-except Exception as e:
-    OPENAI_AVAILABLE = False
-    openai_client = None
-    print(f"❌ OpenAI client initialization failed: {e}")
 
 app = Flask(__name__)
 CORS(app)
@@ -787,26 +775,23 @@ USER QUESTION: {user_message}
 
 Please provide helpful general health information and wellness tips. If the question involves specific medical symptoms, conditions, or test results, politely remind the user to consult with a healthcare professional."""
 
-        # Use OpenAI
+        # Use Gemini for voice chat
         response_text = ""
-        if OPENAI_AVAILABLE:
-            try:
-                response = openai_client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": f"REPORT CONTEXT:\n{context}\n\nUSER QUESTION: {user_message}"}
-                    ],
-                    temperature=0.7,
-                    max_tokens=500
-                )
-                response_text = response.choices[0].message.content.strip()
-
-            except Exception as e:
-                print(f"OpenAI voice chat failed: {e}")
-                response_text = "I'm sorry, I'm having trouble accessing the medical information right now. Please try again or consult with your healthcare provider."
-        else:
-            response_text = "The AI service is currently unavailable. Please try again later."
+        try:
+            from google import genai as google_genai
+            from google.genai import types as genai_types
+            _api_key = os.getenv("VERTEX_AI_API_KEY")
+            _model = os.getenv("VERTEX_MODEL", "gemini-2.5-flash-lite")
+            chat_client = google_genai.Client(api_key=_api_key)
+            response = chat_client.models.generate_content(
+                model=_model,
+                contents=f"{system_prompt}\n\nREPORT CONTEXT:\n{context}\n\nUSER QUESTION: {user_message}",
+                config=genai_types.GenerateContentConfig(temperature=0.7, max_output_tokens=500)
+            )
+            response_text = response.text.strip()
+        except Exception as e:
+            print(f"Gemini voice chat failed: {e}")
+            response_text = "I'm sorry, I'm having trouble accessing the medical information right now. Please try again or consult with your healthcare provider."
 
         return jsonify({
             'response': response_text,
