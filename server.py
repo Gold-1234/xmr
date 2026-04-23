@@ -631,6 +631,76 @@ def extract_report_types(text):
 
 
 
+@app.route('/reports/<user_id>', methods=['GET'])
+def get_user_reports(user_id):
+    """Get all saved reports for a user."""
+    try:
+        from modules.database import get_user_reports
+        reports = get_user_reports(user_id)
+        return jsonify({'reports': reports})
+    except Exception as e:
+        print(f"Get reports error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/report/<report_id>', methods=['GET'])
+def get_report(report_id):
+    """Get detailed report by ID."""
+    try:
+        from modules.database import get_report_details
+        report = get_report_details(report_id)
+        if report is None:
+            return jsonify({'error': 'Report not found'}), 404
+        return jsonify(report)
+    except Exception as e:
+        print(f"Get report error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/report/<report_id>', methods=['DELETE'])
+def delete_report(report_id):
+    """Delete a report by ID."""
+    try:
+        user_id = request.args.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'user_id is required'}), 400
+        from modules.database import delete_report
+        success = delete_report(report_id, user_id)
+        if success:
+            return jsonify({'success': True})
+        return jsonify({'error': 'Failed to delete report'}), 500
+    except Exception as e:
+        print(f"Delete report error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/save-report', methods=['POST'])
+def save_report():
+    """Save a medical report and its test results."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        user_id = data.get('userId')
+        filename = data.get('filename', 'report')
+        file_type = data.get('fileType', 'unknown')
+        file_url = data.get('fileUrl', '')
+        patient = data.get('patient', {})
+        tests = data.get('tests', [])
+
+        if not user_id:
+            return jsonify({'error': 'userId is required'}), 400
+
+        from modules.database import save_medical_report
+        result = save_medical_report(user_id, filename, file_type, file_url, patient, tests)
+        return jsonify(result)
+
+    except Exception as e:
+        print(f"Save report error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/auth/login', methods=['POST'])
 def login():
     """Direct login - create user with email and return user ID."""
