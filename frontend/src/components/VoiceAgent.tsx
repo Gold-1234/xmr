@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
-import { backendUrl, readJsonResponse } from '../utils/api';
+import React, { useState, useRef } from 'react';
+import {
+  LiveKitRoom,
+  VoiceAssistantControlBar,
+  RoomAudioRenderer,
+} from '@livekit/components-react';
+import { Mic, MessageCircle, Loader2 } from 'lucide-react';
+import '@livekit/components-styles';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Patient {
   name: string | null;
@@ -24,160 +30,203 @@ interface Test {
 interface VoiceAgentProps {
   patientInfo: Patient | null;
   extractedTests: Test[];
+  userId?: string;
+  userProfile?: any;
   standalone?: boolean;
 }
 
-type Status = 'idle' | 'recording' | 'processing' | 'speaking';
+const VoiceAgent: React.FC<VoiceAgentProps> = ({
+  patientInfo,
+  extractedTests,
+  userId: userIdProp,
+  userProfile: userProfileProp,
+  standalone = false,
+}) => {
+  const { user } = useAuth();
+  const userId = userIdProp ?? user?.id;
+  const userProfile = userProfileProp ?? user?.profile;
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [serverUrl, setServerUrl] = useState<string | null>(null);
+  const roomName = useRef(`medical-assistant-${Date.now()}`).current;
 
-const VoiceAgent: React.FC<VoiceAgentProps> = ({ patientInfo, extractedTests, standalone = false }) => {
-  const [status, setStatus] = useState<Status>('idle');
-  const [statusText, setStatusText] = useState('Tap to speak');
-  const [detectedLanguage, setDetectedLanguage] = useState('auto');
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const cartesiaApiKey = import.meta.env.VITE_CARTESIA_API_KEY;
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    setConnectionError(null);
 
-  useEffect(() => {
-    if (status !== 'recording' && audioBlob) handleRecordingComplete();
-  }, [status, audioBlob]);
-
-  const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      const chunks: Blob[] = [];
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-      recorder.onstop = () => {
-        setAudioBlob(new Blob(chunks, { type: 'audio/webm' }));
-        stream.getTracks().forEach(t => t.stop());
-      };
-      setMediaRecorder(recorder);
-      recorder.start();
-      setStatus('recording');
-      setStatusText('Listening…');
-    } catch {
-      alert('Microphone access denied. Please allow microphone permissions.');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder && status === 'recording') {
-      mediaRecorder.stop();
-      setStatus('processing');
-      setStatusText('Processing…');
-    }
-  };
-
-  const handleMicPress = () => {
-    if (status === 'recording') stopRecording();
-    else if (status === 'idle') startRecording();
-  };
-
-  const processSpeechToText = async (blob: Blob): Promise<string | null> => {
-    if (!cartesiaApiKey) return null;
-    try {
-      const arrayBuffer = await blob.arrayBuffer();
-      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-      const response = await fetch('https://api.cartesia.ai/stt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-API-Key': cartesiaApiKey, 'Cartesia-Version': '2024-06-10' },
-        body: JSON.stringify({ audio: base64Audio, model: 'nova-2-general', language: 'auto' }),
-      });
-      if (response.ok) {
-        const result = await response.json();
-        if (result.language) setDetectedLanguage(result.language);
-        return result.text || result.transcription || null;
-      }
-    } catch { /* silent */ }
-    return null;
-  };
-
-  const speakWithCartesia = async (text: string) => {
-    if (!cartesiaApiKey) return;
-    try {
-      const response = await fetch('https://api.cartesia.ai/tts/bytes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-API-Key': cartesiaApiKey, 'Cartesia-Version': '2024-06-10' },
-        body: JSON.stringify({
-          model_id: 'sonic-english',
-          transcript: text,
-          voice: { mode: 'id', id: 'professional-female-medical' },
-          output_format: { container: 'wav', encoding: 'pcm_s16le', sample_rate: 44100 },
-        }),
-      });
-      if (response.ok) {
-        const audioUrl = URL.createObjectURL(await response.blob());
-        const audio = new Audio(audioUrl);
-        setStatus('speaking');
-        setStatusText('Speaking…');
-        audio.onended = () => { setStatus('idle'); setStatusText('Tap to speak'); URL.revokeObjectURL(audioUrl); };
-        audio.onerror = () => { setStatus('idle'); setStatusText('Tap to speak'); };
-        await audio.play();
-      }
-    } catch {
-      setStatus('idle');
-      setStatusText('Tap to speak');
-    }
-  };
-
-  const handleRecordingComplete = async () => {
-    if (!audioBlob) return;
-    const text = await processSpeechToText(audioBlob);
-    setAudioBlob(null);
-    if (!text) {
-      setStatus('idle');
-      setStatusText('Tap to speak');
-      return;
-    }
-    try {
-      const response = await fetch(`${backendUrl}/voice-chat`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/livekit-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: text,
-          report_data: patientInfo || extractedTests.length > 0 ? { patient: patientInfo, tests: extractedTests } : null,
-          context: patientInfo || extractedTests.length > 0 ? 'with_report' : 'general_health',
-          language: detectedLanguage,
+          room_name: roomName,
+          identity: 'user',
+          user_id: userId,
+          user_profile: userProfile,
+          patient_info: patientInfo,
+          extracted_tests: extractedTests,
         }),
       });
-      if (response.ok) {
-        const data = await readJsonResponse<any>(response);
-        await speakWithCartesia(data.response);
-      } else {
-        setStatus('idle');
-        setStatusText('Tap to speak');
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to get token from server');
       }
-    } catch {
-      setStatus('idle');
-      setStatusText('Tap to speak');
+
+      const data = await response.json();
+      setToken(data.token);
+      setServerUrl(data.url);
+      setIsConnected(true);
+      setIsConnecting(false);
+    } catch (error) {
+      const err = error as Error;
+      setIsConnecting(false);
+      setConnectionError(`Connection error: ${err.message}`);
     }
+  };
+
+  const handleDisconnect = () => {
+    setIsConnected(false);
+    setToken(null);
+    setServerUrl(null);
+    setConnectionError(null);
   };
 
   const hasContext = patientInfo || extractedTests.length > 0;
 
-  const pulseClass = status === 'recording'
-    ? 'scale-110 bg-red-500 shadow-[0_0_0_16px_rgba(239,68,68,0.15)]'
-    : status === 'speaking'
-    ? 'bg-cyan-500 shadow-[0_0_0_16px_rgba(6,182,212,0.15)]'
-    : 'bg-navy-800 hover:bg-navy-700 hover:shadow-[0_0_0_12px_rgba(15,23,42,0.08)]';
-
-  return (
-    <div className={`${standalone ? 'p-6 lg:p-8 max-w-lg mx-auto' : 'p-6'}`}>
-      {standalone && (
+  if (standalone) {
+    return (
+      <div className="p-6 lg:p-8 max-w-lg mx-auto">
         <div className="mb-8">
           <h1 className="page-title">Voice Assistant</h1>
           <p className="text-muted mt-1">
-            {hasContext ? 'Ask questions about your report results.' : 'Ask a general health question.'}
+            {hasContext
+              ? 'Ask questions about your report results.'
+              : 'Ask a general health question.'}
           </p>
+        </div>
+
+        {!isConnected ? (
+          <div className="card p-10 flex flex-col items-center gap-6 text-center">
+            <button
+              onClick={handleConnect}
+              disabled={isConnecting}
+              className={`w-28 h-28 rounded-full flex items-center justify-center text-white transition-all duration-300 disabled:cursor-not-allowed
+                ${isConnecting
+                  ? 'bg-navy-800 opacity-70'
+                  : 'bg-navy-800 hover:bg-navy-700 hover:shadow-[0_0_0_12px_rgba(15,23,42,0.08)]'
+                }`}
+            >
+              {isConnecting ? (
+                <Loader2 className="w-10 h-10 animate-spin" />
+              ) : (
+                <Mic className="w-10 h-10" />
+              )}
+            </button>
+            <div>
+              <p className="text-base font-medium text-slate-600">
+                {isConnecting ? 'Connecting…' : 'Tap to connect'}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {hasContext ? 'Ask about your report' : 'Ask a health question'}
+              </p>
+            </div>
+            {connectionError && (
+              <p className="text-sm text-red-600">{connectionError}</p>
+            )}
+            <div className="flex items-center gap-3 text-xs text-slate-400">
+              <span>Real-time voice</span>
+              <span>·</span>
+              <span>WebRTC-powered</span>
+              <span>·</span>
+              <span>Report-aware</span>
+            </div>
+          </div>
+        ) : (
+          <div className="card overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                <span className="text-sm font-semibold text-slate-900">Voice Assistant Active</span>
+              </div>
+              <button
+                onClick={handleDisconnect}
+                className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                Disconnect
+              </button>
+            </div>
+            <div className="p-6">
+              <LiveKitRoom
+                token={token || undefined}
+                serverUrl={serverUrl || undefined}
+                connectOptions={{ autoSubscribe: true }}
+                audio={true}
+                video={false}
+              >
+                <RoomAudioRenderer />
+                <VoiceAssistantControlBar />
+              </LiveKitRoom>
+            </div>
+          </div>
+        )}
+
+        <p className="text-xs text-slate-400 mt-4 text-center">
+          Not a substitute for professional medical advice. Always consult a healthcare provider.
+        </p>
+      </div>
+    );
+  }
+
+  // Embedded mode (used inside Report.tsx)
+  if (!isConnected) {
+    return (
+      <div className="card p-5 border border-slate-200">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-lg bg-cyan-50 border border-cyan-200 flex items-center justify-center flex-shrink-0">
+            <MessageCircle className="w-4 h-4 text-cyan-600" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-slate-900">Voice Assistant</div>
+            <div className="text-xs text-slate-500 mt-0.5">Ask questions about your report using voice</div>
+          </div>
+        </div>
+        <button
+          onClick={handleConnect}
+          disabled={isConnecting}
+          className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 active:scale-[0.98] text-white text-sm font-medium py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isConnecting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Mic className="w-4 h-4" />
+          )}
+          {isConnecting ? 'Connecting…' : 'Start Voice Session'}
+        </button>
+        {connectionError && (
+          <p className="text-xs text-red-600 mt-2 text-center">{connectionError}</p>
+        )}
+        <div className="mt-3 flex items-center justify-center gap-3 text-xs text-slate-400">
+          <span>Real-time responses</span>
+          <span>·</span>
+          <span>Report-aware</span>
+          <span>·</span>
+          <span>Multilingual</span>
         </div>
       )}
 
-      <div className="card p-10 flex flex-col items-center gap-8">
-        {/* Orb button */}
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+          <span className="text-sm font-semibold text-slate-900">Voice Assistant Active</span>
+        </div>
         <button
-          onClick={handleMicPress}
-          disabled={status === 'processing' || status === 'speaking'}
-          className={`w-28 h-28 rounded-full flex items-center justify-center text-white transition-all duration-300 ${pulseClass} disabled:cursor-not-allowed`}
+          onClick={handleDisconnect}
+          className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
         >
           {status === 'processing' ? (
             <Loader2 className="w-10 h-10 animate-spin" />
@@ -189,36 +238,19 @@ const VoiceAgent: React.FC<VoiceAgentProps> = ({ patientInfo, extractedTests, st
             <Mic className="w-10 h-10" />
           )}
         </button>
-
-        {/* Status label */}
-        <div className="text-center">
-          <p className={`text-base font-medium ${status === 'recording' ? 'text-red-500' : status === 'speaking' ? 'text-cyan-600' : 'text-slate-600'}`}>
-            {statusText}
-          </p>
-          {status === 'idle' && (
-            <p className="text-xs text-slate-400 mt-1">
-              {hasContext ? 'Ask about your report' : 'Ask a health question'}
-            </p>
-          )}
-        </div>
-
-        {/* Waveform dots when recording */}
-        {status === 'recording' && (
-          <div className="flex items-end gap-1.5 h-8">
-            {[0, 1, 2, 3, 4].map(i => (
-              <div
-                key={i}
-                className="w-1.5 bg-red-400 rounded-full animate-bounce"
-                style={{ animationDelay: `${i * 0.1}s`, height: `${[60, 100, 80, 100, 60][i]}%` }}
-              />
-            ))}
-          </div>
-        )}
       </div>
-
-      <p className="text-xs text-slate-400 mt-4 text-center">
-        Not a substitute for professional medical advice. Always consult a healthcare provider.
-      </p>
+      <div className="p-4">
+        <LiveKitRoom
+          token={token || undefined}
+          serverUrl={serverUrl || undefined}
+          connectOptions={{ autoSubscribe: true }}
+          audio={true}
+          video={false}
+        >
+          <RoomAudioRenderer />
+          <VoiceAssistantControlBar />
+        </LiveKitRoom>
+      </div>
     </div>
   );
 };

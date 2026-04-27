@@ -642,29 +642,100 @@ def generate_test_explanations(tests):
 
     return tests
 
-def analyze_report(text, user_profile=None, fast_mode=False):
-    """Analyze the extracted text using Gemini primary, OpenAI fallback with personalized insights."""
-    # TEMPORARY: Skip LLM calls for testing PDF processing
-    # print("🚫 LLM calls commented out for PDF testing - using fast analysis only")
-    # return analyze_report_fast(text)
+def _analyze_single_call(text, user_profile=None):
+    """Extract tests AND generate personalized analysis in one LLM call."""
+    if len(text) > 4000:
+        text = text[:4000] + "...[TRUNCATED]"
 
-    # Original code (commented out for testing):
+    profile_context = ""
+    if user_profile:
+        parts = []
+        for k, label in [('name','Name'),('age','Age'),('bodyType','Body Type'),
+                         ('currentGoal','Health Goal'),('previousDiseases','Medical History'),
+                         ('desiredOutcome','Desired Outcome')]:
+            if user_profile.get(k):
+                parts.append(f"{label}: {user_profile[k]}")
+        if parts:
+            profile_context = "PATIENT PROFILE:\n" + "\n".join(parts) + "\n\n"
+
+    prompt = f"""{profile_context}You are a medical data expert. From the report text below, extract all test results AND provide a personalized analysis in one JSON response.
+
+REPORT TEXT:
+{text}
+
+Return ONLY this JSON (no markdown):
+{{
+  "patient_name": "string or null",
+  "sample_date": "YYYY-MM-DD or null",
+  "tests": [
+    {{
+      "test_name": "official clinical name",
+      "value": "numeric or text result",
+      "unit": "measurement unit or null",
+      "reference_range": "e.g. 12.0-15.0 or null",
+      "interpretation": "Normal|High|Low|Unknown",
+      "explanation": "2-3 sentence personalized explanation of what this result means for this patient"
+    }}
+  ],
+  "health_summary": "Overall assessment highlighting key findings",
+  "concerning_findings": ["list critical issues needing attention"],
+  "dietary_recommendations": ["specific actionable dietary suggestions"],
+  "lifestyle_recommendations": ["personalized lifestyle suggestions"]
+}}"""
+
+    response = gemini_client.models.generate_content(
+        model=VERTEX_MODEL_NAME,
+        contents=prompt,
+        config=genai_types.GenerateContentConfig(temperature=0.2, max_output_tokens=4000)
+    )
+    return _parse_llm_json(response.text.strip())
+
+
+def analyze_report(text, user_profile=None, fast_mode=False):
+    """Single LLM call: extract + personalize together."""
     if fast_mode:
         print("⚡ Fast analysis mode - skipping LLM processing...")
         return analyze_report_fast(text)
-    
-    print("🤖 Creating a report for you...")
 
-    # Extract structured data
-    structured_data = extract_medical_data(text)
-    print(f"📊 Extracted structured data: {json.dumps(structured_data, indent=2)}")
-    
-    # Generate personalized explanations and recommendations
-    if structured_data['tests']:
-        structured_data['tests'] = generate_personalized_analysis(structured_data['tests'], user_profile)
-    
-    print("✅ Report creation complete")
-    return structured_data
+    print("🤖 Analyzing report (single LLM call)...")
+    try:
+        data = _analyze_single_call(text, user_profile)
+    except Exception as e:
+        print(f"❌ Single-call analysis failed: {e}, falling back to two-step...")
+        data = extract_medical_data(text, user_profile)
+        if data.get('tests'):
+            data['tests'] = generate_personalized_analysis(data['tests'], user_profile)
+        return data
+
+    # Normalise patient block
+    patient = {
+        "name": data.get("patient_name"),
+        "age": user_profile.get("age") if user_profile else None,
+        "gender": None
+    }
+
+    tests = data.get("tests", [])
+    # Apply age-based reference ranges for any test missing one
+    patient_age = patient["age"] or (data.get("patient", {}) or {}).get("age")
+    for test in tests:
+        if not test.get("reference_range"):
+            ar = get_age_based_reference_ranges(test["test_name"], patient_age)
+            if ar:
+                test["reference_range"] = ar
+        if test.get("reference_range") and test.get("interpretation") in [None, "Unknown"]:
+            test["interpretation"] = determine_interpretation(
+                test["value"], test["reference_range"], test["test_name"]
+            )
+
+    # Attach summary to first test (existing convention)
+    if tests:
+        tests[0]["health_summary"] = data.get("health_summary", "")
+        tests[0]["concerning_findings"] = data.get("concerning_findings", [])
+        tests[0]["dietary_recommendations"] = data.get("dietary_recommendations", [])
+        tests[0]["lifestyle_recommendations"] = data.get("lifestyle_recommendations", [])
+
+    print(f"✅ Analysis complete: {len(tests)} tests")
+    return {"patient": patient, "tests": tests, "sample_date": data.get("sample_date")}
 
 def analyze_report_fast(text):
     """Fast analysis using regex patterns instead of LLM."""

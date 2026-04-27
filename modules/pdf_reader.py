@@ -6,6 +6,7 @@ from modules.ocr_reader import extract_text_from_image
 import cv2
 import numpy as np
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from google import genai as google_genai
 from google.genai import types as genai_types
@@ -142,58 +143,66 @@ def pdf_contains_images(pdf_path):
         return False
 
 
+def _extract_page_text(args):
+    """Extract text from a single PDF page (runs in thread pool)."""
+    pdf_path, page_num = args
+    doc = fitz.open(pdf_path)
+    page = doc.load_page(page_num)
+    page_text = page.get_text("text")
+
+    if not page_text.strip() or len(page_text.strip()) < 50:
+        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+        img_data = pix.tobytes("png")
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.write(img_data)
+            tmp_path = tmp.name
+        try:
+            ocr_text = extract_text_from_image(tmp_path)
+            if ocr_text:
+                page_text += "\n" + ocr_text
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+    doc.close()
+    return page_num, page_text.strip()
+
+
 def process_pdf_pages_with_llm(pdf_path):
-    """Process each PDF page individually and send to LLM for page-specific analysis."""
+    """Process PDF pages in parallel — extract text concurrently, then analyze concurrently."""
     try:
         doc = fitz.open(pdf_path)
-        print(f"📖 Processing PDF with {len(doc)} pages individually")
-
-        all_pages_data = []
-
-        for page_num in range(len(doc)):
-            print(f"📄 Processing page {page_num + 1}")
-
-            # Extract text from this specific page
-            page = doc.load_page(page_num)
-
-            # Try text extraction first
-            page_text = page.get_text("text")
-
-            # If limited text, check for images and OCR
-            if not page_text.strip() or len(page_text.strip()) < 50:
-                print(f"🔍 Limited text on page {page_num + 1}, checking for images...")
-                # Convert page to image for OCR
-                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2x scaling for better OCR
-                img_data = pix.tobytes("png")
-
-                # Save image temporarily for OCR
-                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
-                    temp_file.write(img_data)
-                    temp_image_path = temp_file.name
-
-                try:
-                    # Run OCR on the page image (now uses OpenAI Vision)
-                    ocr_text = extract_text_from_image(temp_image_path)
-                    if ocr_text:
-                        page_text += "\n" + ocr_text
-                        print(f"🤖 OCR extracted {len(ocr_text)} chars from page {page_num + 1}")
-                finally:
-                    # Clean up temp file
-                    if os.path.exists(temp_image_path):
-                        os.unlink(temp_image_path)
-
-            if page_text.strip():
-                # Send this page's text to LLM for analysis (now uses OpenAI)
-                page_data = analyze_pdf_page_with_llm(page_text, page_num + 1)
-                if page_data:
-                    all_pages_data.append(page_data)
-                    print(f"✅ Page {page_num + 1} analyzed successfully")
-                else:
-                    print(f"⚠️ Page {page_num + 1} analysis failed")
-            else:
-                print(f"⚠️ No text found on page {page_num + 1}")
-
+        num_pages = len(doc)
         doc.close()
+        print(f"📖 Processing PDF with {num_pages} pages in parallel")
+
+        # Step 1: Extract text from all pages concurrently
+        page_texts = {}
+        with ThreadPoolExecutor(max_workers=min(num_pages, 4)) as executor:
+            futures = {executor.submit(_extract_page_text, (pdf_path, i)): i for i in range(num_pages)}
+            for future in as_completed(futures):
+                page_num, text = future.result()
+                if text:
+                    page_texts[page_num] = text
+                    print(f"✅ Text extracted from page {page_num + 1} ({len(text)} chars)")
+
+        # Step 2: Analyze all pages concurrently via LLM
+        all_pages_data = [None] * num_pages
+        pages_with_text = [(pn, pt) for pn, pt in page_texts.items()]
+
+        with ThreadPoolExecutor(max_workers=min(len(pages_with_text), 4)) as executor:
+            futures = {
+                executor.submit(analyze_pdf_page_with_llm, text, pn + 1): pn
+                for pn, text in pages_with_text
+            }
+            for future in as_completed(futures):
+                page_num = futures[future]
+                page_data = future.result()
+                if page_data:
+                    all_pages_data[page_num] = page_data
+                    print(f"✅ Page {page_num + 1} analyzed")
+
+        all_pages_data = [p for p in all_pages_data if p is not None]
 
         # Combine all page data
         combined_result = {
