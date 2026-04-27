@@ -1,5 +1,7 @@
-import React from 'react';
-import { Loader2, Save } from 'lucide-react';
+import React, { useState } from 'react';
+import { Loader2, Download, FileText, ImageIcon, Upload, ChevronDown, ChevronUp, CheckCircle2, AlertTriangle, Salad, Dumbbell, Calendar, Mic } from 'lucide-react';
+import { backendUrl, readJsonResponse } from '../utils/api';
+import { getStatusClass } from '../utils/trendUtils';
 import VoiceAgent from './VoiceAgent';
 
 interface Patient {
@@ -13,7 +15,7 @@ interface Test {
   value: string;
   unit: string | null;
   reference_range: string | null;
-  interpretation: "Low" | "Normal" | "High" | "Unknown";
+  interpretation: 'Low' | 'Normal' | 'High' | 'Unknown';
   explanation?: string;
   health_summary?: string;
   concerning_findings?: string[];
@@ -34,175 +36,153 @@ interface ReportProps {
   analysisPhase: 'none' | 'basic' | 'detailed';
   basicAnalysis: Test[];
   analysisResult: any;
-  onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onNewUpload: () => void;
   uploading: boolean;
   handleSaveReport: () => void;
   saving: boolean;
   saved: boolean;
 }
 
-interface TestsByDate {
-  [date: string]: Test[];
+function StatusBadge({ status }: { status: string }) {
+  const cls = getStatusClass(status);
+  return <span className={cls}>{status}</span>;
+}
+
+function TestCard({ test }: { test: Test }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div
+        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
+        onClick={() => setOpen(o => !o)}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-slate-900 truncate">{test.test_name}</div>
+            <div className="text-xs text-slate-500 mt-0.5">
+              <span className="font-semibold text-slate-700">{test.value}</span>
+              {test.unit && <span className="ml-1">{test.unit}</span>}
+              {test.reference_range && <span className="ml-2 text-slate-400">Ref: {test.reference_range}</span>}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <StatusBadge status={test.interpretation} />
+          {test.explanation && (open ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />)}
+        </div>
+      </div>
+      {open && test.explanation && (
+        <div className="px-4 py-3 bg-slate-50 border-t border-slate-100">
+          <p className="text-xs text-slate-600 leading-relaxed">{test.explanation}</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 const Report: React.FC<ReportProps> = ({
-  extractedTests,
-  patientInfo,
-  uploadedFile,
-  analysisPhase,
-  basicAnalysis,
-  analysisResult,
-  onFileSelect,
-  uploading,
-  handleSaveReport,
-  saving,
-  saved
+  extractedTests, patientInfo, uploadedFile, analysisPhase, analysisResult,
+  onNewUpload, uploading, handleSaveReport, saving, saved,
 }) => {
-  // Sort tests by interpretation priority: Abnormal (High/Low) -> Normal -> Unknown
-  const sortedTests = [...extractedTests].sort((a, b) => {
-    const priority = { 'High': 4, 'Low': 4, 'Normal': 2, 'Unknown': 1 };
-    return priority[b.interpretation] - priority[a.interpretation];
-  });
-
+  const [showVoice, setShowVoice] = useState(false);
   const isPDF = uploadedFile?.type === 'application/pdf';
   const isImage = uploadedFile?.type.startsWith('image/');
+  const summaryData = extractedTests[0] ?? null;
+  const testsByDate: Record<string, Test[]> = analysisResult?.tests_by_date ?? {};
+  const dateOrder: string[] = analysisResult?.date_order ?? [];
+  const hasDateGrouping = dateOrder.length > 0 && Object.keys(testsByDate).length > 0;
 
-  // Get summary data from the first test (where LLM stores summary data)
-  const summaryData = extractedTests.length > 0 ? extractedTests[0] : null;
-
-  // Check if we have date-grouped data
-  const testsByDate: TestsByDate = analysisResult?.tests_by_date || {};
-  const dateOrder: string[] = analysisResult?.date_order || [];
-  const hasDateGrouping = Object.keys(testsByDate).length > 0 && dateOrder.length > 0;
-
-  // Debug: Print what frontend receives
-  console.log('🖥️ Frontend received analysisResult:', {
-    hasAnalysisResult: !!analysisResult,
-    testsCount: extractedTests?.length || 0,
-    hasDateGrouping,
-    testsByDateKeys: Object.keys(testsByDate),
-    dateOrder,
-    testsByDateSample: testsByDate ? Object.fromEntries(
-      Object.entries(testsByDate).slice(0, 2).map(([date, tests]) => [
-        date,
-        tests.slice(0, 3).map(t => ({ name: t.test_name, value: t.value, interpretation: t.interpretation }))
-      ])
-    ) : {}
+  const sortedFlat = [...extractedTests].sort((a, b) => {
+    const p: Record<string, number> = { High: 4, Low: 3, Normal: 2, Unknown: 1 };
+    return (p[b.interpretation] ?? 0) - (p[a.interpretation] ?? 0);
   });
+
+  const abnormalCount = extractedTests.filter(t => t.interpretation === 'High' || t.interpretation === 'Low').length;
+  const normalCount = extractedTests.filter(t => t.interpretation === 'Normal').length;
+
+  const handleDownloadTxt = async () => {
+    try {
+      const response = await fetch(`${backendUrl}/download-txt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient: patientInfo, tests: extractedTests,
+          tests_by_date: analysisResult?.tests_by_date,
+          date_order: analysisResult?.date_order,
+          analysis_complete: true,
+        }),
+      });
+      const result = await readJsonResponse<any>(response);
+      if (result.success && result.txt_url) {
+        const a = document.createElement('a');
+        a.href = result.txt_url;
+        a.download = result.filename || 'medical_report.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch { /* silent */ }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Report || Summary Layout */}
-      {uploadedFile && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column: Uploaded Report */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Uploaded Report</h2>
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept=".pdf,.png,.jpg,.jpeg"
-                  onChange={onFileSelect}
-                  disabled={uploading}
-                  className="hidden"
-                />
-                <span className="text-blue-600 hover:text-blue-700 font-medium text-sm">
-                  Upload New File
-                </span>
-              </label>
+      {/* Header row */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Analysis Results</h1>
+          {extractedTests.length > 0 && (
+            <p className="text-sm text-slate-500 mt-0.5">
+              {extractedTests.length} tests found
+              {abnormalCount > 0 && <span className="text-amber-600 ml-2">· {abnormalCount} need attention</span>}
+              {normalCount > 0 && <span className="text-emerald-600 ml-2">· {normalCount} normal</span>}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {analysisPhase === 'basic' && (
+            <span className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Deep analysis in progress…
+            </span>
+          )}
+          {analysisPhase === 'detailed' && (
+            <span className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+              <CheckCircle2 className="w-3 h-3" />
+              Analysis complete
+            </span>
+          )}
+          <button onClick={onNewUpload} className="btn-ghost">
+            <Upload className="w-4 h-4" />
+            New upload
+          </button>
+        </div>
+      </div>
+
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left column: Document + Voice Assistant */}
+        <div className="space-y-4">
+          {/* Document viewer */}
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="section-title flex items-center gap-2">
+                {isPDF ? <FileText className="w-4 h-4 text-slate-400" /> : <ImageIcon className="w-4 h-4 text-slate-400" />}
+                Document
+              </h2>
             </div>
-
-            <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
+            <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
               {isPDF && uploadedFile && (
-                <div className="w-full">
-                  {uploadedFile?.url && (console.log('📄 PDF viewer URL:', uploadedFile?.url), null)}
+                <div className="relative">
                   <iframe
-                    src={`${uploadedFile.url}#toolbar=0&navpanes=0&scrollbar=0`}
-                    className="w-full h-[400px] rounded-lg border-0"
+                    src={`${uploadedFile.url}#toolbar=0&navpanes=0`}
+                    className="w-full h-[420px] border-0"
                     title="Medical Report PDF"
-                    onError={async (e) => {
-                      console.error('🚨 PDF iframe failed to load:', {
-                        error: e,
-                        url: uploadedFile.url,
-                        iframe: e.currentTarget,
-                        timestamp: new Date().toISOString(),
-                        userAgent: navigator.userAgent
-                      });
-
-                      // Try to fetch the URL manually to check accessibility
-                      try {
-                        console.log('🔍 Testing manual fetch of PDF URL...');
-                        const response = await fetch(uploadedFile.url, {
-                          method: 'HEAD',
-                          mode: 'cors'
-                        });
-                        console.log('📡 Manual fetch result:', {
-                          status: response.status,
-                          statusText: response.statusText,
-                          headers: Object.fromEntries(response.headers.entries()),
-                          url: uploadedFile.url,
-                          ok: response.ok,
-                          contentType: response.headers.get('content-type'),
-                          contentLength: response.headers.get('content-length')
-                        });
-                      } catch (fetchError) {
-                        console.error('🚨 Manual fetch also failed:', {
-                          error: fetchError,
-                          url: uploadedFile.url,
-                          message: fetchError instanceof Error ? fetchError.message : 'Unknown error'
-                        });
-                      }
-
-                      // Try without URL parameters as fallback
-                      console.log('🔄 Retrying without URL parameters...');
-                      const iframeWithoutParams = e.currentTarget.parentElement?.querySelector('.iframe-retry') as HTMLIFrameElement;
-                      if (iframeWithoutParams) {
-                        iframeWithoutParams.src = uploadedFile.url;
-                        iframeWithoutParams.style.display = 'block';
-                        e.currentTarget.style.display = 'none';
-                        return;
-                      }
-
-                      // Show fallback if all attempts fail
-                      console.log('📋 Showing fallback download link');
-                      e.currentTarget.style.display = 'none';
-                      const fallback = e.currentTarget.parentElement?.querySelector('.pdf-fallback');
-                      if (fallback) (fallback as HTMLElement).style.display = 'block';
-                    }}
                   />
-
-                  {/* Hidden retry iframe without parameters */}
-                  <iframe
-                    src=""
-                    className="iframe-retry w-full h-[400px] rounded-lg border-0"
-                    style={{ display: 'none' }}
-                    title="Medical Report PDF (Retry)"
-                    onError={(e) => {
-                      console.error('🚨 Retry iframe also failed:', {
-                        url: uploadedFile.url,
-                        error: e
-                      });
-                      e.currentTarget.style.display = 'none';
-                      const fallback = e.currentTarget.parentElement?.querySelector('.pdf-fallback');
-                      if (fallback) (fallback as HTMLElement).style.display = 'block';
-                    }}
-                  />
-
-                  <div className="pdf-fallback hidden text-center py-8">
-                    <div className="text-gray-500 mb-4">
-                      <div className="text-4xl mb-2">📄</div>
-                      <p>PDF Preview Not Available</p>
-                      <p className="text-sm">Browser security prevents PDF embedding</p>
-                      <p className="text-xs mt-2 text-gray-400">Check console (F12) for detailed error logs</p>
-                    </div>
-                    <a
-                      href={uploadedFile.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-lg"
-                    >
-                      📥 Open PDF in New Tab
+                  <div className="pdf-fallback hidden p-8 text-center">
+                    <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                    <p className="text-sm text-slate-500 mb-4">PDF preview unavailable</p>
+                    <a href={uploadedFile.url} target="_blank" rel="noopener noreferrer" className="btn-secondary text-sm">
+                      Open PDF in new tab
                     </a>
                   </div>
                 </div>
@@ -211,335 +191,217 @@ const Report: React.FC<ReportProps> = ({
                 <img
                   src={uploadedFile.url}
                   alt="Medical Report"
-                  className="w-full max-h-[400px] object-contain rounded-lg"
-                  onError={(e) => {
-                    console.error('Image loading failed:', e);
-                    e.currentTarget.style.display = 'none';
-                    const fallback = e.currentTarget.parentElement?.querySelector('.image-fallback');
-                    if (fallback) (fallback as HTMLElement).style.display = 'block';
-                  }}
+                  className="w-full max-h-[420px] object-contain"
                 />
               )}
               {!isPDF && !isImage && (
-                <div className="text-center py-8 text-gray-500">
-                  <div className="text-4xl mb-2">📄</div>
-                  <p>File uploaded successfully</p>
-                  <p className="text-sm">Analysis in progress...</p>
-                </div>
-              )}
-
-              {/* Voice Agent - Integrated into Uploaded Report Section */}
-              <VoiceAgent
-                patientInfo={patientInfo}
-                extractedTests={extractedTests}
-              />
-            </div>
-          </div>
-
-          {/* Right Column: AI Summary */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">AI Health Summary</h2>
-
-            <div className="space-y-6">
-              {/* Health Summary */}
-              {summaryData?.health_summary && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center">
-                    <span className="mr-2">🏥</span>
-                    Health Summary
-                  </h3>
-                  <p className="text-blue-800 leading-relaxed">{summaryData.health_summary}</p>
-                </div>
-              )}
-
-              {/* Concerning Findings */}
-              {summaryData?.concerning_findings && summaryData.concerning_findings.length > 0 && (
-                <div className="bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-lg border border-red-200">
-                  <h3 className="text-lg font-semibold text-red-900 mb-3 flex items-center">
-                    <span className="mr-2">⚠️</span>
-                    Concerning Findings
-                  </h3>
-                  <ul className="space-y-2">
-                    {summaryData.concerning_findings.map((finding, index) => (
-                      <li key={index} className="flex items-start text-red-800">
-                        <span className="text-red-600 mr-2 mt-1">•</span>
-                        <span className="leading-relaxed">{finding}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Dietary Recommendations */}
-              {summaryData?.dietary_recommendations && summaryData.dietary_recommendations.length > 0 && (
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
-                  <h3 className="text-lg font-semibold text-green-900 mb-3 flex items-center">
-                    <span className="mr-2">🥗</span>
-                    Dietary Recommendations
-                  </h3>
-                  <ul className="space-y-2">
-                    {summaryData.dietary_recommendations.map((rec, index) => (
-                      <li key={index} className="flex items-start text-green-800">
-                        <span className="text-green-600 mr-2 mt-1">•</span>
-                        <span className="leading-relaxed">{rec}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Lifestyle Recommendations */}
-              {summaryData?.lifestyle_recommendations && summaryData.lifestyle_recommendations.length > 0 && (
-                <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-4 rounded-lg border border-purple-200">
-                  <h3 className="text-lg font-semibold text-purple-900 mb-3 flex items-center">
-                    <span className="mr-2">🏃‍♂️</span>
-                    Lifestyle Recommendations
-                  </h3>
-                  <ul className="space-y-2">
-                    {summaryData.lifestyle_recommendations.map((rec, index) => (
-                      <li key={index} className="flex items-start text-purple-800">
-                        <span className="text-purple-600 mr-2 mt-1">•</span>
-                        <span className="leading-relaxed">{rec}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Show loading state if no summary data yet */}
-              {analysisPhase === 'detailed' && !summaryData?.health_summary && (
-                <div className="text-center py-8 text-gray-500">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p>Generating personalized health insights...</p>
+                <div className="p-8 text-center text-slate-400">
+                  <FileText className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">File uploaded successfully</p>
                 </div>
               )}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Separator Line */}
-      {uploadedFile && extractedTests.length > 0 && (
-        <div className="flex items-center justify-center py-4">
-          <div className="flex-1 h-px bg-gray-300"></div>
-          <span className="px-4 text-gray-500 font-medium">Detailed Results</span>
-          <div className="flex-1 h-px bg-gray-300"></div>
-        </div>
-      )}
-
-      {/* Test Results */}
-      {extractedTests.length > 0 && (
-        <div className="space-y-6">
-          {/* Patient Information */}
-          {patientInfo && (patientInfo.name || patientInfo.age || patientInfo.gender) && (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Patient Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {patientInfo.name && (
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="text-sm text-blue-600 font-medium">Name</div>
-                    <div className="text-lg font-semibold text-gray-900">{patientInfo.name}</div>
-                  </div>
-                )}
-                {patientInfo.age && (
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="text-sm text-green-600 font-medium">Age</div>
-                    <div className="text-lg font-semibold text-gray-900">{patientInfo.age} years</div>
-                  </div>
-                )}
-                {patientInfo.gender && (
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <div className="text-sm text-purple-600 font-medium">Gender</div>
-                    <div className="text-lg font-semibold text-gray-900">{patientInfo.gender}</div>
-                  </div>
-                )}
+          {/* Voice Assistant card */}
+          {analysisPhase === 'detailed' && !showVoice && (
+            <div className="card p-5 border border-slate-200">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-9 h-9 rounded-lg bg-cyan-50 border border-cyan-200 flex items-center justify-center flex-shrink-0">
+                  <Mic className="w-4 h-4 text-cyan-600" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">Voice Assistant</div>
+                  <div className="text-xs text-slate-500 mt-0.5">Ask questions about your report using your voice</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowVoice(true)}
+                className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 active:scale-[0.98] text-white text-sm font-medium py-2.5 rounded-lg transition-all"
+              >
+                <Mic className="w-4 h-4" />
+                Start Voice Session
+              </button>
+              <div className="mt-3 flex items-center justify-center gap-3 text-xs text-slate-400">
+                <span>Real-time responses</span>
+                <span>·</span>
+                <span>Report-aware</span>
+                <span>·</span>
+                <span>Multilingual</span>
               </div>
             </div>
           )}
 
-          {/* Test Results */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-gray-900">
-                Test Results ({extractedTests.length})
-              </h3>
-              <div className="flex gap-3">
-                {/* Download TXT Button */}
-                <button
-                  onClick={async () => {
-                    try {
-                      const backendUrl = import.meta.env.VITE_BACKEND_URL;
-                      const response = await fetch(`${backendUrl}/download-txt`, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                          patient: patientInfo,
-                          tests: extractedTests,
-                          tests_by_date: analysisResult?.tests_by_date,
-                          date_order: analysisResult?.date_order,
-                          analysis_complete: true
-                        }),
-                      });
-
-                      if (!response.ok) {
-                        throw new Error('Download failed');
-                      }
-
-                      const result = await response.json();
-                      if (result.success && result.txt_url) {
-                        // Create a temporary link to download the file
-                        const link = document.createElement('a');
-                        link.href = result.txt_url;
-                        link.download = result.filename || 'medical_report.txt';
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                      } else {
-                        alert('Failed to generate TXT file');
-                      }
-                    } catch (error) {
-                      console.error('Download error:', error);
-                      alert('Failed to download TXT file');
-                    }
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition"
-                >
-                  📄 Download TXT
+          {/* Expanded Voice Assistant */}
+          {showVoice && (
+            <div className="card overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                  <span className="text-sm font-semibold text-slate-900">Voice Assistant</span>
+                </div>
+                <button onClick={() => setShowVoice(false)} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                  Close
                 </button>
-
-                {/* Save Report Button */}
-                {!saved && (
-                  <button
-                    onClick={handleSaveReport}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {saving ? (
-                      <Loader2 className="animate-spin w-4 h-4" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                    {saving ? 'Saving...' : 'Save Report'}
-                  </button>
-                )}
-                {saved && (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 font-medium rounded-lg">
-                    <Save className="w-4 h-4" />
-                    Report Saved
-                  </div>
-                )}
               </div>
+              <VoiceAgent patientInfo={patientInfo} extractedTests={extractedTests} />
             </div>
+          )}
+        </div>
 
-            {/* Date-wise or Flat Test Results */}
-            {hasDateGrouping ? (
-              <div className="space-y-6">
-                {dateOrder.map((date) => {
-                  const dateTests = testsByDate[date] || [];
-                  if (dateTests.length === 0) return null;
-
-                  return (
-                    <div key={date} className="border border-gray-200 rounded-lg p-6">
-                      <div className="flex items-center mb-4">
-                        <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium mr-3">
-                          📅 {date}
-                        </div>
-                        <span className="text-gray-600 text-sm">
-                          {dateTests.length} test{dateTests.length !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        {dateTests.map((test, index) => (
-                          <div key={index} className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition">
-                            <div className="flex justify-between items-start mb-2">
-                              <h5 className="text-md font-semibold text-gray-900">{test.test_name}</h5>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                test.interpretation === 'Normal' ? 'bg-green-100 text-green-800' :
-                                test.interpretation === 'High' ? 'bg-red-100 text-red-800' :
-                                test.interpretation === 'Low' ? 'bg-orange-100 text-orange-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                {test.interpretation}
-                              </span>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
-                              <div>
-                                <div className="text-xs text-gray-600">Value</div>
-                                <div className="font-semibold text-gray-900 text-sm">
-                                  {test.value} {test.unit && <span className="text-gray-500">({test.unit})</span>}
-                                </div>
-                              </div>
-                              {test.reference_range && (
-                                <div>
-                                  <div className="text-xs text-gray-600">Reference Range</div>
-                                  <div className="font-semibold text-gray-900 text-sm">{test.reference_range}</div>
-                                </div>
-                              )}
-                            </div>
-
-                            {test.explanation && (
-                              <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
-                                <div className="text-xs text-blue-600 font-medium mb-1">💡 AI Medical Explanation</div>
-                                <div className="text-xs text-gray-700 leading-relaxed">{test.explanation}</div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
+        {/* Right: Summary */}
+        <div className="card p-5">
+          <h2 className="section-title mb-4">Health Summary</h2>
+          <div className="space-y-4">
+            {summaryData?.health_summary && (
+              <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">
+                <p className="text-sm text-slate-700 leading-relaxed">{summaryData.health_summary}</p>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {sortedTests.map((test, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition">
-                    <div className="flex justify-between items-start mb-3">
-                      <h4 className="text-lg font-semibold text-gray-900">{test.test_name}</h4>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        test.interpretation === 'Normal' ? 'bg-green-100 text-green-800' :
-                        test.interpretation === 'High' ? 'bg-red-100 text-red-800' :
-                        test.interpretation === 'Low' ? 'bg-orange-100 text-orange-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {test.interpretation}
-                      </span>
-                    </div>
+            )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <div className="text-sm text-gray-600">Value</div>
-                        <div className="font-semibold text-gray-900">
-                          {test.value} {test.unit && <span className="text-gray-500">({test.unit})</span>}
-                        </div>
-                      </div>
-                      {test.reference_range && (
-                        <div>
-                          <div className="text-sm text-gray-600">Reference Range</div>
-                          <div className="font-semibold text-gray-900">{test.reference_range}</div>
-                        </div>
-                      )}
-                    </div>
+            {summaryData?.concerning_findings && summaryData.concerning_findings.length > 0 && (
+              <div className="bg-red-50 rounded-lg border border-red-200 p-4">
+                <div className="flex items-center gap-2 text-red-700 font-medium text-sm mb-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Concerning findings
+                </div>
+                <ul className="space-y-1.5">
+                  {summaryData.concerning_findings.map((f, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-red-700">
+                      <span className="w-1 h-1 rounded-full bg-red-400 mt-2 flex-shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-                    {test.explanation && (
-                      <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <div className="text-sm text-blue-600 font-medium mb-1">💡 AI Medical Explanation</div>
-                        <div className="text-sm text-gray-700 leading-relaxed">{test.explanation}</div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+            {summaryData?.dietary_recommendations && summaryData.dietary_recommendations.length > 0 && (
+              <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-4">
+                <div className="flex items-center gap-2 text-emerald-700 font-medium text-sm mb-2">
+                  <Salad className="w-4 h-4" />
+                  Dietary recommendations
+                </div>
+                <ul className="space-y-1.5">
+                  {summaryData.dietary_recommendations.map((r, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-emerald-700">
+                      <span className="w-1 h-1 rounded-full bg-emerald-400 mt-2 flex-shrink-0" />
+                      {r}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {summaryData?.lifestyle_recommendations && summaryData.lifestyle_recommendations.length > 0 && (
+              <div className="bg-violet-50 rounded-lg border border-violet-200 p-4">
+                <div className="flex items-center gap-2 text-violet-700 font-medium text-sm mb-2">
+                  <Dumbbell className="w-4 h-4" />
+                  Lifestyle recommendations
+                </div>
+                <ul className="space-y-1.5">
+                  {summaryData.lifestyle_recommendations.map((r, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-violet-700">
+                      <span className="w-1 h-1 rounded-full bg-violet-400 mt-2 flex-shrink-0" />
+                      {r}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {analysisPhase !== 'detailed' && !summaryData?.health_summary && (
+              <div className="flex items-center gap-3 py-6 text-slate-400">
+                <Loader2 className="w-5 h-5 animate-spin text-cyan-500" />
+                <span className="text-sm">Generating health insights…</span>
+              </div>
+            )}
+
+            {!summaryData?.health_summary && analysisPhase === 'detailed' && (
+              <div className="text-center py-6 text-slate-400">
+                <p className="text-sm">No summary available for this report.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Patient info */}
+      {patientInfo && (patientInfo.name || patientInfo.age || patientInfo.gender) && (
+        <div className="card p-5">
+          <h2 className="section-title mb-4">Patient Information</h2>
+          <div className="flex flex-wrap gap-3">
+            {patientInfo.name && (
+              <div className="px-4 py-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="text-xs text-slate-400 mb-0.5">Name</div>
+                <div className="text-sm font-semibold text-slate-900">{patientInfo.name}</div>
+              </div>
+            )}
+            {patientInfo.age && (
+              <div className="px-4 py-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="text-xs text-slate-400 mb-0.5">Age</div>
+                <div className="text-sm font-semibold text-slate-900">{patientInfo.age} yrs</div>
+              </div>
+            )}
+            {patientInfo.gender && (
+              <div className="px-4 py-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="text-xs text-slate-400 mb-0.5">Gender</div>
+                <div className="text-sm font-semibold text-slate-900">{patientInfo.gender}</div>
               </div>
             )}
           </div>
         </div>
       )}
 
+      {/* Test results */}
+      {extractedTests.length > 0 && (
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <h2 className="section-title">Test Results <span className="font-normal text-slate-400">({extractedTests.length})</span></h2>
+            <div className="flex items-center gap-2">
+              <button onClick={handleDownloadTxt} className="btn-secondary text-xs">
+                <Download className="w-3.5 h-3.5" />
+                Export TXT
+              </button>
+              {saving && (
+                <span className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+                </span>
+              )}
+              {saved && (
+                <span className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-lg">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Saved
+                </span>
+              )}
+            </div>
+          </div>
 
+          {hasDateGrouping ? (
+            <div className="space-y-5">
+              {dateOrder.map((date) => {
+                const dateTests = testsByDate[date] ?? [];
+                if (!dateTests.length) return null;
+                return (
+                  <div key={date}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{date}</span>
+                      <span className="text-xs text-slate-400">· {dateTests.length} tests</span>
+                    </div>
+                    <div className="space-y-2">
+                      {dateTests.map((test, i) => <TestCard key={i} test={test} />)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {sortedFlat.map((test, i) => <TestCard key={i} test={test} />)}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

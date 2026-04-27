@@ -8,6 +8,7 @@ import uuid
 import hashlib
 from datetime import datetime
 import base64
+from pathlib import Path
 from main import analyze_report_api
 from dotenv import load_dotenv
 from modules.analyzer import extract_dates_from_text_regex
@@ -19,6 +20,66 @@ CORS(app)
 
 # Get port from environment or default
 port = int(os.environ.get('PORT', 5001))
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIST_DIR = BASE_DIR / 'frontend' / 'dist'
+
+
+def frontend_build_exists():
+    return (FRONTEND_DIST_DIR / 'index.html').exists()
+
+
+@app.route('/', methods=['GET'])
+def frontend_index():
+    """Serve the built frontend when available, otherwise show a helpful landing page."""
+    if frontend_build_exists():
+        return send_from_directory(str(FRONTEND_DIST_DIR), 'index.html')
+
+    return """
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>XMR API Server</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            max-width: 760px;
+            margin: 48px auto;
+            padding: 0 20px;
+            line-height: 1.5;
+            color: #1f2937;
+          }
+          code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>XMR backend is running</h1>
+        <p>This Flask server provides the API and upload endpoints.</p>
+        <p>To open the frontend during development, run:</p>
+        <p><code>cd frontend</code></p>
+        <p><code>npm install</code></p>
+        <p><code>npm run dev</code></p>
+        <p>Then open <code>http://localhost:5173</code>.</p>
+        <p>If you build the frontend with <code>npm run build</code>, this server will automatically serve it from <code>http://localhost:{port}/</code>.</p>
+      </body>
+    </html>
+    """
+
+
+@app.route('/<path:path>', methods=['GET'])
+def frontend_assets(path):
+    """Serve built frontend assets when present."""
+    if frontend_build_exists():
+        asset_path = FRONTEND_DIST_DIR / path
+        if asset_path.exists() and asset_path.is_file():
+            return send_from_directory(str(FRONTEND_DIST_DIR), path)
+
+    return jsonify({'error': 'Not found'}), 404
 
 # Serve uploaded files
 @app.route('/uploads/<filename>')
@@ -701,6 +762,63 @@ def save_report():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/trends/<user_id>/<path:test_name>', methods=['GET'])
+def get_trends(user_id, test_name):
+    """Get trend data for a specific test across all user reports."""
+    try:
+        from modules.database import get_test_trends, get_user_reports
+        # Try dedicated trend function first
+        trends = get_test_trends(user_id, test_name)
+
+        # get_test_trends may return incomplete data — enrich with report info
+        if trends:
+            # Add filename from reports for provenance display
+            try:
+                reports = get_user_reports(user_id)
+                report_map = {r['id']: r.get('filename', '') for r in reports}
+                for t in trends:
+                    if 'report_id' not in t:
+                        t['report_id'] = ''
+                    if 'filename' not in t:
+                        t['filename'] = report_map.get(t.get('report_id', ''), '')
+                    if 'report_date' not in t or not t['report_date']:
+                        t['report_date'] = t.get('created_at', '')
+            except Exception:
+                pass
+        else:
+            # Fallback: scan all reports manually (case-insensitive)
+            try:
+                from modules.database import get_report_details
+                reports = get_user_reports(user_id)
+                test_name_lower = test_name.lower()
+                for report in reports:
+                    detail = get_report_details(report['id'])
+                    if not detail:
+                        continue
+                    for test in detail.get('test_results', []):
+                        if test.get('test_name', '').lower() == test_name_lower:
+                            trends.append({
+                                'report_id': report['id'],
+                                'filename': report.get('filename', ''),
+                                'test_name': test.get('test_name', test_name),
+                                'value': test.get('value', ''),
+                                'unit': test.get('unit'),
+                                'reference_range': test.get('reference_range'),
+                                'interpretation': test.get('interpretation', 'Unknown'),
+                                'report_date': report.get('created_at', ''),
+                                'created_at': report.get('created_at', ''),
+                            })
+                            break
+            except Exception as fallback_err:
+                print(f"Trend fallback error: {fallback_err}")
+
+        trends.sort(key=lambda x: x.get('report_date', ''))
+        return jsonify({'trends': trends, 'test_name': test_name})
+    except Exception as e:
+        print(f"Trends error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/auth/login', methods=['POST'])
 def login():
     """Direct login - create user with email and return user ID."""
@@ -874,4 +992,11 @@ Please provide helpful general health information and wellness tips. If the ques
 
 if __name__ == '__main__':
     print(f"Starting server on port {port}")
-    app.run(debug=True, host='0.0.0.0', port=port, threaded=True)
+    debug_mode = os.environ.get('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes')
+    app.run(
+        debug=debug_mode,
+        use_reloader=False,
+        host='0.0.0.0',
+        port=port,
+        threaded=True,
+    )
