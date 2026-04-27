@@ -411,5 +411,1034 @@
         }
       ]
     }
+  ],
+  "b86b82aa-0225-c328-b491-268f67f1b8ff": [
+    {
+      "id": "dec27d8b-b61f-4942-af7b-bc4f8986bc17",
+      "user_id": "b86b82aa-0225-c328-b491-268f67f1b8ff",
+      "filename": "test_report.png",
+      "file_type": "image/png",
+      "file_url": "http://localhost:5001/uploads/test_report.png",
+      "extracted_tests": [
+        "Hemoglobin",
+        "Packed Cell Volume (PCV)",
+        "RBC Count",
+        "MCV",
+        "MCH",
+        "MCHC",
+        "Red Cell Distribution Width (RDW)",
+        "Total Leukocyte Count (TLC)",
+        "Segmented Neutrophils",
+        "Lymphocytes",
+        "Monocytes",
+        "Eosinophils",
+        "Basophils",
+        "Neutrophils",
+        "Lymphocytes",
+        "Monocytes",
+        "Eosinophils",
+        "Basophils",
+        "Platelet Count"
+      ],
+      "patient_name": "Mr. NEERAJ OJHA",
+      "patient_age": null,
+      "patient_gender": null,
+      "created_at": "2026-04-26T21:07:23.717227",
+      "test_results": [
+        {
+          "concerning_findings": [
+            "Low Hemoglobin with elevated RBC count, PCV, MCV, MCH, MCHC, and RDW: This combination of results is the most significant finding and requires immediate medical attention to diagnose the cause of potential anemia and red blood cell abnormalities."
+          ],
+          "dietary_recommendations": [
+            "Focus on Iron-Rich Foods: Include lean red meats, poultry, fish, beans, lentils, spinach, and fortified cereals in your diet to support hemoglobin production.",
+            "Increase Vitamin B12 Intake: Consume dairy products, eggs, meat, and fortified foods. If you are vegetarian or vegan, consider a B12 supplement.",
+            "Boost Folate (Vitamin B9) Consumption: Eat plenty of leafy green vegetables (spinach, kale), broccoli, asparagus, and fortified grains. Folate is crucial for red blood cell formation.",
+            "Ensure Adequate Vitamin C: Vitamin C enhances iron absorption. Include citrus fruits, berries, bell peppers, and tomatoes in your meals.",
+            "Prioritize Protein for Muscle Growth: Continue to consume adequate protein from sources like lean meats, fish, eggs, dairy, legumes, and tofu to support your muscular health goal.",
+            "Hydration: Drink plenty of water throughout the day, especially during and after exercise, to maintain optimal blood volume and cell function."
+          ],
+          "explanation": "Faiz, your hemoglobin level of 12.0 g/dL is noted as 'High' in the provided interpretation, but it actually falls below the reference range of 13.5-17.5 g/dL. This suggests a potential mild anemia or that your body might not be producing enough red blood cells or hemoglobin. Given your healthy body type and goal of building muscle, adequate oxygen transport is crucial for muscle recovery and growth.",
+          "health_summary": "Faiz, your lab results present a complex picture, particularly concerning your red blood cell parameters. While you are described as healthy with a goal of building muscle, your Hemoglobin is below the expected range, suggesting a potential mild anemia. This is accompanied by a high RBC count, high PCV, and elevated MCV, MCH, MCHC, and RDW. The high MCV indicates larger than normal red blood cells, and the high RDW suggests variability in their size. These findings, when taken together, are not typical of a perfectly healthy individual and warrant further investigation to determine the underlying cause. It's possible there's an issue with red blood cell production or maturation. Your white blood cell counts are largely within normal limits, with a slight elevation in the percentage and absolute count of neutrophils and lymphocytes, which could be reactive or indicative of a minor inflammatory process, but this is less concerning than the red blood cell findings. Your platelet count is normal.",
+          "interpretation": "High",
+          "lifestyle_recommendations": [
+            "Consult a Physician Immediately: Given the concerning red blood cell findings, it is imperative to schedule an appointment with your doctor for a thorough evaluation and further diagnostic tests (e.g., iron studies, vitamin B12 and folate levels, peripheral blood smear).",
+            "Moderate Exercise Routine: Continue with your exercise regimen aimed at building muscle, but listen to your body. If you experience unusual fatigue or shortness of breath, reduce intensity and consult your doctor.",
+            "Adequate Sleep: Aim for 7-9 hours of quality sleep per night. This is crucial for muscle recovery, hormone regulation, and overall health.",
+            "Stress Management: Implement stress-reducing techniques such as meditation, deep breathing exercises, or engaging in hobbies, as chronic stress can impact overall health.",
+            "Avoid Smoking and Excessive Alcohol: These can negatively impact blood cell production and overall health."
+          ],
+          "reference_range": "13.5-17.5 g/dL",
+          "test_name": "Hemoglobin",
+          "unit": "g/dL",
+          "value": "12.0"
+        },
+        {
+          "explanation": "Your Packed Cell Volume (PCV) of 37.7% is also interpreted as 'High'. PCV represents the percentage of your blood volume made up of red blood cells. Similar to hemoglobin, this value, when considered with the low hemoglobin, might indicate a relative increase in red blood cell size or a dilution effect, which warrants further investigation.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Packed Cell Volume (PCV)",
+          "unit": "%",
+          "value": "37.7"
+        },
+        {
+          "explanation": "Faiz, your Red Blood Cell (RBC) count of 5.79 million/\u00b5L is interpreted as 'High' and is at the upper end of the reference range (4.5-5.9 million/\u00b5L). While high, it's important to consider this in conjunction with your hemoglobin and PCV. An elevated RBC count can sometimes be a compensatory mechanism for low oxygen-carrying capacity.",
+          "interpretation": "High",
+          "reference_range": "4.5-5.9 million/\u00b5L",
+          "test_name": "RBC Count",
+          "unit": "mill/mm3",
+          "value": "5.79"
+        },
+        {
+          "explanation": "Your Mean Corpuscular Volume (MCV) of 65.0 fL is interpreted as 'High'. MCV indicates the average size of your red blood cells. A high MCV typically suggests that your red blood cells are larger than normal. This, combined with a low hemoglobin, could point towards certain types of anemia, such as megaloblastic anemia, though other causes exist.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCV",
+          "unit": "fL",
+          "value": "65.0"
+        },
+        {
+          "explanation": "The Mean Corpuscular Hemoglobin (MCH) value of 20.7 pg is interpreted as 'High'. MCH measures the average amount of hemoglobin within each red blood cell. A high MCH, when red blood cells are also large (high MCV), can be seen in certain conditions but needs to be assessed alongside other parameters.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCH",
+          "unit": "pg",
+          "value": "20.7"
+        },
+        {
+          "explanation": "Your Mean Corpuscular Hemoglobin Concentration (MCHC) of 31.9 g/dL is interpreted as 'High'. MCHC reflects the average concentration of hemoglobin within a red blood cell. A high MCHC, particularly with large red blood cells, can sometimes be associated with conditions like hereditary spherocytosis or other red blood cell abnormalities.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCHC",
+          "unit": "g/dL",
+          "value": "31.9"
+        },
+        {
+          "explanation": "Faiz, your Red Cell Distribution Width (RDW) of 15.9% is interpreted as 'High'. RDW measures the variation in the size of your red blood cells. An elevated RDW indicates that there is a significant difference in the size of your red blood cells, which can be a sign of nutritional deficiencies (like B12 or folate) or other underlying conditions affecting red blood cell production.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Red Cell Distribution Width (RDW)",
+          "unit": "%",
+          "value": "15.9"
+        },
+        {
+          "explanation": "Your Total Leukocyte Count (TLC) of 4.2 thou/mm3 is within the normal range. This count represents your total white blood cells, which are essential for fighting infections. A normal count is reassuring regarding your general immune system status.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Total Leukocyte Count (TLC)",
+          "unit": "thou/mm3",
+          "value": "4.2"
+        },
+        {
+          "explanation": "Your Segmented Neutrophils percentage of 39.6% is interpreted as 'High'. Neutrophils are a type of white blood cell that are crucial for fighting bacterial infections. While the percentage is high, it's important to look at the absolute count and other white blood cell types.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Segmented Neutrophils",
+          "unit": "%",
+          "value": "39.6"
+        },
+        {
+          "explanation": "Your absolute Lymphocyte count of 2.11 thou/mm3 is within the normal range. This is the actual number of lymphocytes in your blood.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Lymphocytes",
+          "unit": "%",
+          "value": "50.3"
+        },
+        {
+          "explanation": "Your absolute Monocyte count of 0.34 thou/mm3 is within the normal range.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Monocytes",
+          "unit": "%",
+          "value": "8.1"
+        },
+        {
+          "explanation": "Your absolute Eosinophil count of 0.06 thou/mm3 is within the normal range.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Eosinophils",
+          "unit": "%",
+          "value": "1.4"
+        },
+        {
+          "explanation": "Your absolute Basophil count of 0.03 thou/mm3 is within the normal range.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Basophils",
+          "unit": "%",
+          "value": "0.6"
+        },
+        {
+          "explanation": "Faiz, your absolute Neutrophil count of 1.66 thou/mm3 is interpreted as 'High'. This is the actual number of neutrophils in your blood. While the percentage was high, the absolute count should be considered in context with your total white blood cell count.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Neutrophils",
+          "unit": "thou/mm3",
+          "value": "1.66"
+        },
+        {
+          "explanation": "Your absolute Lymphocyte count of 2.11 thou/mm3 is within the normal range. This is the actual number of lymphocytes in your blood.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Lymphocytes",
+          "unit": "thou/mm3",
+          "value": "2.11"
+        },
+        {
+          "explanation": "Your absolute Monocyte count of 0.34 thou/mm3 is within the normal range.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Monocytes",
+          "unit": "thou/mm3",
+          "value": "0.34"
+        },
+        {
+          "explanation": "Your absolute Eosinophil count of 0.06 thou/mm3 is within the normal range.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Eosinophils",
+          "unit": "thou/mm3",
+          "value": "0.06"
+        },
+        {
+          "explanation": "Your absolute Basophil count of 0.03 thou/mm3 is within the normal range.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Basophils",
+          "unit": "thou/mm3",
+          "value": "0.03"
+        },
+        {
+          "explanation": "Faiz, your Platelet Count of 245.0 thou/mm3 is within the normal reference range (150,000-450,000 /\u00b5L). Platelets are essential for blood clotting, and your count is healthy.",
+          "interpretation": "Normal",
+          "reference_range": "150000-450000 /\u00b5L",
+          "test_name": "Platelet Count",
+          "unit": "thou/mm3",
+          "value": "245.0"
+        }
+      ]
+    },
+    {
+      "id": "0b7e4f08-c5eb-424a-838b-a44e9c5e7ed8",
+      "user_id": "b86b82aa-0225-c328-b491-268f67f1b8ff",
+      "filename": "test_report.png",
+      "file_type": "image/png",
+      "file_url": "http://localhost:5001/uploads/test_report.png",
+      "extracted_tests": [
+        "Hemoglobin",
+        "Packed Cell Volume (PCV)",
+        "RBC Count",
+        "MCV",
+        "MCH",
+        "MCHC",
+        "Red Cell Distribution Width (RDW)",
+        "Total Leukocyte Count (TLC)",
+        "Segmented Neutrophils",
+        "Lymphocytes",
+        "Monocytes",
+        "Eosinophils",
+        "Basophils",
+        "Neutrophils",
+        "Lymphocytes",
+        "Monocytes",
+        "Eosinophils",
+        "Basophils",
+        "Platelet Count"
+      ],
+      "patient_name": "Mr. NEERAJ OJHA",
+      "patient_age": null,
+      "patient_gender": null,
+      "created_at": "2026-04-27T20:43:25.619059",
+      "test_results": [
+        {
+          "concerning_findings": [
+            "Elevated Hemoglobin, PCV, RBC Count, MCV, MCH, MCHC, and RDW: While not immediately life-threatening, these consistently high red blood cell indices warrant further investigation to rule out conditions such as polycythemia, dehydration, or other underlying causes of increased red blood cell production. It's crucial to discuss these findings with your physician for a comprehensive evaluation.",
+            "Elevated Segmented Neutrophils and Lymphocytes (both percentage and absolute count): While not drastically high, the simultaneous elevation of both neutrophils and lymphocytes could indicate a mild inflammatory process or an ongoing immune response. This should be monitored and discussed with your doctor."
+          ],
+          "dietary_recommendations": [
+            "Hydration is Key: Given the elevated red blood cell parameters, ensure you are consistently well-hydrated. Aim for at least 2-3 liters of water daily, increasing intake during and after workouts. Dehydration can falsely elevate these values.",
+            "Balanced Macronutrient Intake: To support your muscular goals, focus on adequate protein intake (1.6-2.2g per kg of body weight) from lean sources like chicken, fish, lean beef, eggs, dairy, and plant-based options (beans, lentils, tofu). Ensure sufficient complex carbohydrates (whole grains, sweet potatoes, fruits) for energy and healthy fats (avocado, nuts, seeds, olive oil) for hormone production and overall health.",
+            "Iron Intake: While your red blood cell count is high, it's important to maintain adequate iron intake for optimal hemoglobin function. Include iron-rich foods like red meat, spinach, lentils, and fortified cereals. However, avoid excessive iron supplementation without medical advice, as this could exacerbate high red blood cell counts.",
+            "Vitamin B12 and Folate: These vitamins are crucial for red blood cell production. Ensure you are consuming foods rich in B12 (animal products, fortified foods) and folate (leafy greens, legumes, citrus fruits).",
+            "Electrolyte Balance: With increased fluid intake and exercise, maintain electrolyte balance by including foods rich in potassium (bananas, sweet potatoes), sodium (in moderation), and magnesium (nuts, seeds, leafy greens)."
+          ],
+          "explanation": "Faiz, your hemoglobin level of 12.0 g/dL is noted as 'High' relative to the reference range of 13.5-17.5 g/dL. This indicates a higher concentration of red blood cells than typically expected. Given your healthy body type and goal of building muscle, this is an interesting finding. While a slightly higher hemoglobin can be beneficial for oxygen transport during intense workouts, significantly elevated levels can sometimes be a sign of dehydration or other underlying conditions. We'll monitor this.",
+          "health_summary": "Faiz, your lab results show a consistent pattern of elevated red blood cell parameters, including Hemoglobin, PCV, RBC Count, MCV, MCH, and MCHC. This suggests your body is producing a higher than typical number of red blood cells, and these cells are larger and carrying more hemoglobin. The high RDW indicates variability in the size of these red blood cells. While this could potentially enhance oxygen delivery for your muscular goals, it's important to understand the underlying cause. Your white blood cell counts are mostly within normal limits, with a slight elevation in both the percentage and absolute count of neutrophils and lymphocytes. This could reflect a minor immune system activation or stress. Your platelet count is normal. Since there are no previous dates provided, we are analyzing a snapshot of your current health.",
+          "interpretation": "High",
+          "lifestyle_recommendations": [
+            "Consult Your Physician: The most important recommendation is to discuss these lab results with your doctor. They can perform a physical examination, review your medical history, and order further tests if necessary to determine the cause of the elevated red blood cell parameters and white blood cell differentials.",
+            "Consistent Exercise Routine: Continue with your training regimen to achieve your muscular goals. Ensure your workouts are well-structured and include a mix of resistance training and cardiovascular exercise. Listen to your body and allow for adequate rest and recovery.",
+            "Stress Management: High stress levels can impact immune function. Incorporate stress-reducing activities like meditation, deep breathing exercises, or hobbies you enjoy.",
+            "Adequate Sleep: Aim for 7-9 hours of quality sleep per night. Sleep is crucial for muscle recovery, hormone regulation, and overall health.",
+            "Monitor Symptoms: Pay attention to any new or worsening symptoms such as fatigue, dizziness, shortness of breath, or unusual bruising. Report these to your doctor promptly."
+          ],
+          "reference_range": "13.5-17.5 g/dL",
+          "test_name": "Hemoglobin",
+          "unit": "g/dL",
+          "value": "12.0"
+        },
+        {
+          "explanation": "Your Packed Cell Volume (PCV) of 37.7% is also interpreted as 'High'. This test measures the proportion of your blood volume that is made up of red blood cells. Similar to hemoglobin, this high value suggests a higher concentration of red blood cells, which aligns with the hemoglobin finding.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Packed Cell Volume (PCV)",
+          "unit": "%",
+          "value": "37.7"
+        },
+        {
+          "explanation": "Faiz, your Red Blood Cell (RBC) count of 5.79 million/\u00b5L is considered 'High' within the reference range of 4.5-5.9 million/\u00b5L. This further supports the observation of a higher than average number of red blood cells circulating in your blood.",
+          "interpretation": "High",
+          "reference_range": "4.5-5.9 million/\u00b5L",
+          "test_name": "RBC Count",
+          "unit": "mill/mm3",
+          "value": "5.79"
+        },
+        {
+          "explanation": "Your Mean Corpuscular Volume (MCV) of 65.0 fL is interpreted as 'High'. MCV tells us the average size of your red blood cells. A high MCV generally means your red blood cells are larger than average. This, in conjunction with the high RBC count and hemoglobin, suggests a potential issue with how red blood cells are being produced or regulated.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCV",
+          "unit": "fL",
+          "value": "65.0"
+        },
+        {
+          "explanation": "The Mean Corpuscular Hemoglobin (MCH) of 20.7 pg is also 'High'. This measures the average amount of hemoglobin inside a single red blood cell. A high MCH, along with high MCV, suggests that each of your red blood cells is carrying a larger than average amount of hemoglobin.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCH",
+          "unit": "pg",
+          "value": "20.7"
+        },
+        {
+          "explanation": "Your Mean Corpuscular Hemoglobin Concentration (MCHC) of 31.9 g/dL is interpreted as 'High'. This indicates the average concentration of hemoglobin within your red blood cells. A high MCHC, when combined with high MCV and MCH, can sometimes point towards certain types of anemia or other red blood cell abnormalities, though in your case, the overall picture is of increased red blood cells.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCHC",
+          "unit": "g/dL",
+          "value": "31.9"
+        },
+        {
+          "explanation": "Faiz, your Red Cell Distribution Width (RDW) of 15.9% is 'High'. RDW measures the variation in the size of your red blood cells. A high RDW means there's a greater difference in size between your red blood cells. This finding, alongside the other elevated red blood cell indices, suggests a potential underlying process affecting red blood cell production or turnover.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Red Cell Distribution Width (RDW)",
+          "unit": "%",
+          "value": "15.9"
+        },
+        {
+          "explanation": "Your Total Leukocyte Count (TLC) of 4.2 thou/mm3 is within the 'Normal' range. This is a good sign, indicating that your overall white blood cell count, which is crucial for fighting infection, is at a healthy level.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Total Leukocyte Count (TLC)",
+          "unit": "thou/mm3",
+          "value": "4.2"
+        },
+        {
+          "explanation": "Your percentage of Segmented Neutrophils is 39.6%, which is interpreted as 'High'. Neutrophils are a type of white blood cell that are a key part of your immune system, fighting bacterial infections. While a slightly elevated percentage can be normal, a sustained high level might warrant further investigation, especially in conjunction with other findings.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Segmented Neutrophils",
+          "unit": "%",
+          "value": "39.6"
+        },
+        {
+          "explanation": "Your absolute Lymphocyte count of 2.11 thou/mm3 is 'Normal'. This is the actual number of lymphocytes in your blood.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Lymphocytes",
+          "unit": "%",
+          "value": "50.3"
+        },
+        {
+          "explanation": "Your absolute Monocyte count of 0.34 thou/mm3 is 'Normal'.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Monocytes",
+          "unit": "%",
+          "value": "8.1"
+        },
+        {
+          "explanation": "Your absolute Eosinophil count of 0.06 thou/mm3 is 'Normal'.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Eosinophils",
+          "unit": "%",
+          "value": "1.4"
+        },
+        {
+          "explanation": "Your absolute Basophil count of 0.03 thou/mm3 is 'Normal'.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Basophils",
+          "unit": "%",
+          "value": "0.6"
+        },
+        {
+          "explanation": "Your absolute Neutrophil count of 1.66 thou/mm3 is interpreted as 'High'. This is the actual number of neutrophils in your blood. Similar to the percentage, this indicates a higher than average number of these infection-fighting cells.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Neutrophils",
+          "unit": "thou/mm3",
+          "value": "1.66"
+        },
+        {
+          "explanation": "Your absolute Lymphocyte count of 2.11 thou/mm3 is 'Normal'. This is the actual number of lymphocytes in your blood.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Lymphocytes",
+          "unit": "thou/mm3",
+          "value": "2.11"
+        },
+        {
+          "explanation": "Your absolute Monocyte count of 0.34 thou/mm3 is 'Normal'.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Monocytes",
+          "unit": "thou/mm3",
+          "value": "0.34"
+        },
+        {
+          "explanation": "Your absolute Eosinophil count of 0.06 thou/mm3 is 'Normal'.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Eosinophils",
+          "unit": "thou/mm3",
+          "value": "0.06"
+        },
+        {
+          "explanation": "Your absolute Basophil count of 0.03 thou/mm3 is 'Normal'.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Basophils",
+          "unit": "thou/mm3",
+          "value": "0.03"
+        },
+        {
+          "explanation": "Faiz, your Platelet Count of 245.0 thou/mm3 is within the 'Normal' reference range of 150,000-450,000 /\u00b5L. Platelets are essential for blood clotting, and your count is healthy.",
+          "interpretation": "Normal",
+          "reference_range": "150000-450000 /\u00b5L",
+          "test_name": "Platelet Count",
+          "unit": "thou/mm3",
+          "value": "245.0"
+        }
+      ]
+    },
+    {
+      "id": "54ee5f15-3b8e-436b-a252-ceac5dbd0460",
+      "user_id": "b86b82aa-0225-c328-b491-268f67f1b8ff",
+      "filename": "test_report.png",
+      "file_type": "image/png",
+      "file_url": "http://localhost:5001/uploads/test_report.png",
+      "extracted_tests": [
+        "Hemoglobin",
+        "Packed Cell Volume (PCV)",
+        "RBC Count",
+        "MCV",
+        "MCH",
+        "MCHC",
+        "Red Cell Distribution Width (RDW)",
+        "Total Leukocyte Count (TLC)",
+        "Segmented Neutrophils",
+        "Lymphocytes",
+        "Monocytes",
+        "Eosinophils",
+        "Basophils",
+        "Absolute Leukocyte Count Neutrophils",
+        "Absolute Leukocyte Count Lymphocytes",
+        "Absolute Leukocyte Count Monocytes",
+        "Absolute Leukocyte Count Eosinophils",
+        "Absolute Leukocyte Count Basophils",
+        "Platelet Count"
+      ],
+      "patient_name": "NEERAJ OJHA",
+      "patient_age": null,
+      "patient_gender": null,
+      "created_at": "2026-04-27T20:59:40.607307",
+      "test_results": [
+        {
+          "concerning_findings": [
+            "Elevated Hemoglobin and PCV: While these can sometimes be related to hydration or muscle mass, consistently high levels outside the reference range should be evaluated by a physician to rule out conditions like polycythemia or other causes of increased red blood cell production.",
+            "High MCV, MCH, and MCHC with normal RBC count: This combination, alongside the elevated hemoglobin and PCV, is unusual and requires medical assessment to determine the cause. It could suggest issues with red blood cell production or breakdown, or even a laboratory artifact. It's important to discuss this pattern with your doctor.",
+            "Elevated Absolute Neutrophil Count: While not drastically high, an elevated count can indicate an ongoing inflammatory process, infection, or stress. This should be discussed with your doctor, especially in conjunction with the red blood cell findings."
+          ],
+          "dietary_recommendations": [
+            "Ensure Adequate Hydration: Given the elevated red blood cell parameters, it's crucial to maintain consistent and adequate fluid intake throughout the day. Aim for at least 2-3 liters of water daily, more if you are exercising intensely or in hot weather.",
+            "Balanced Macronutrient Intake: Focus on a diet rich in lean protein sources (chicken, fish, lean beef, tofu, legumes) to support muscle growth. Include complex carbohydrates (whole grains, sweet potatoes, oats) for energy and healthy fats (avocado, nuts, seeds, olive oil) for hormone production and overall health.",
+            "Iron-Rich Foods: While your red blood cell indices are high, it's still important to ensure adequate iron intake for overall red blood cell health. Include sources like red meat, spinach, lentils, and fortified cereals.",
+            "Vitamin B12 and Folate: These vitamins are essential for red blood cell formation. Ensure your diet includes sources like eggs, dairy, leafy green vegetables, and fortified foods.",
+            "Limit Processed Foods and Excessive Sodium: These can contribute to fluid retention and potentially impact blood pressure, which is indirectly related to blood volume."
+          ],
+          "explanation": "Faiz, your hemoglobin level of 12.0 g/dL is noted as 'High' by the lab's reference range of 13.5-17.5 g/dL. Hemoglobin is the protein in your red blood cells that carries oxygen. While a higher level can sometimes indicate good hydration or muscle mass, it's important to note it's outside the typical range for males.",
+          "health_summary": "Faiz, you are a healthy 22-year-old with a goal of building muscle. Your lab results show a few interesting points regarding your red blood cell indices and white blood cell differential. Specifically, your hemoglobin, PCV, MCV, MCH, and MCHC are all noted as 'High' by the laboratory's reference ranges, while your RBC count is normal. This pattern of high red blood cell indices with a normal RBC count, alongside a high absolute neutrophil count, warrants further investigation to understand the underlying cause. The high red blood cell parameters could potentially be related to dehydration, although other factors should be considered. Your white blood cell count is within normal limits overall, but the elevated absolute neutrophils suggest a potential inflammatory process or response. Your platelet count is normal, indicating good clotting function.",
+          "interpretation": "High",
+          "lifestyle_recommendations": [
+            "Consult Your Physician: The most important recommendation is to schedule an appointment with your doctor to discuss these lab results. They can perform a physical examination, review your medical history, and order further tests if necessary to understand the cause of the elevated red blood cell parameters and neutrophils.",
+            "Consistent Strength Training: Continue with your strength training program to achieve your muscular health goal. Ensure proper form and progressive overload.",
+            "Adequate Sleep: Aim for 7-9 hours of quality sleep per night. Sleep is crucial for muscle recovery, hormone regulation, and overall health.",
+            "Stress Management: Chronic stress can impact various bodily functions, including immune responses. Incorporate stress-reducing activities like meditation, yoga, or hobbies.",
+            "Monitor Symptoms: Pay attention to any new or worsening symptoms such as fatigue, shortness of breath, headaches, or unusual bruising, and report them to your doctor."
+          ],
+          "reference_range": "13.5-17.5 g/dL",
+          "test_name": "Hemoglobin",
+          "unit": "g/dL",
+          "value": "12.0"
+        },
+        {
+          "explanation": "Your Packed Cell Volume (PCV) of 37.7% is also interpreted as 'High'. PCV, also known as hematocrit, represents the percentage of your blood volume made up of red blood cells. Similar to hemoglobin, this being high can be related to hydration status or red blood cell concentration.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Packed Cell Volume (PCV)",
+          "unit": "%",
+          "value": "37.7"
+        },
+        {
+          "explanation": "Your Red Blood Cell (RBC) count of 5.79 million/\u00b5L falls within the normal reference range of 4.5-5.9 million/\u00b5L. This indicates a healthy number of red blood cells circulating in your blood.",
+          "interpretation": "Normal",
+          "reference_range": "4.5-5.9 million/\u00b5L",
+          "test_name": "RBC Count",
+          "unit": "mill/mm3",
+          "value": "5.79"
+        },
+        {
+          "explanation": "The Mean Corpuscular Volume (MCV) of 65.0 fL is interpreted as 'High'. MCV measures the average size of your red blood cells. A high MCV suggests your red blood cells are larger than average. This, in conjunction with other red blood cell indices, warrants further consideration.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCV",
+          "unit": "fL",
+          "value": "65.0"
+        },
+        {
+          "explanation": "Your Mean Corpuscular Hemoglobin (MCH) of 20.7 pg is interpreted as 'High'. MCH indicates the average amount of hemoglobin within each red blood cell. A high MCH means each red blood cell is carrying more hemoglobin than usual.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCH",
+          "unit": "pg",
+          "value": "20.7"
+        },
+        {
+          "explanation": "The Mean Corpuscular Hemoglobin Concentration (MCHC) of 31.9 g/dL is also interpreted as 'High'. MCHC measures the average concentration of hemoglobin within a red blood cell. A high MCHC suggests your red blood cells are packed with hemoglobin.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCHC",
+          "unit": "g/dL",
+          "value": "31.9"
+        },
+        {
+          "explanation": "Your Red Cell Distribution Width (RDW) of 15.9% is within the normal range. RDW indicates the variation in the size of your red blood cells. A normal RDW suggests your red blood cells are relatively uniform in size.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Red Cell Distribution Width (RDW)",
+          "unit": "%",
+          "value": "15.9"
+        },
+        {
+          "explanation": "Your Total Leukocyte Count (TLC) of 4.2 thou/mm3 is within the normal range. TLC represents the total number of white blood cells in your blood, which are crucial for fighting infections.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Total Leukocyte Count (TLC)",
+          "unit": "thou/mm3",
+          "value": "4.2"
+        },
+        {
+          "explanation": "Your Segmented Neutrophils percentage of 39.6% is interpreted as 'High'. Neutrophils are a type of white blood cell that are part of your immune system, primarily fighting bacterial infections. While the percentage is high, it's important to look at the absolute count.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Segmented Neutrophils",
+          "unit": "%",
+          "value": "39.6"
+        },
+        {
+          "explanation": "Your Lymphocyte percentage of 50.3% is within the normal range. Lymphocytes are another type of white blood cell involved in immune responses, particularly against viral infections.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Lymphocytes",
+          "unit": "%",
+          "value": "50.3"
+        },
+        {
+          "explanation": "Your Monocyte percentage of 8.1% is within the normal range. Monocytes are a type of white blood cell that helps fight infections.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Monocytes",
+          "unit": "%",
+          "value": "8.1"
+        },
+        {
+          "explanation": "Your Eosinophil percentage of 1.4% is within the normal range. Eosinophils are white blood cells that are typically involved in allergic reactions and fighting parasitic infections.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Eosinophils",
+          "unit": "%",
+          "value": "1.4"
+        },
+        {
+          "explanation": "Your Basophil percentage of 0.6% is within the normal range. Basophils are the least common type of white blood cell and are involved in allergic responses.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Basophils",
+          "unit": "%",
+          "value": "0.6"
+        },
+        {
+          "explanation": "Your Absolute Leukocyte Count Neutrophils of 1.66 thou/mm3 is interpreted as 'High'. This means that while the percentage of neutrophils might seem borderline, the actual number of neutrophils in your blood is elevated.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Absolute Leukocyte Count Neutrophils",
+          "unit": "thou/mm3",
+          "value": "1.66"
+        },
+        {
+          "explanation": "Your Absolute Leukocyte Count Lymphocytes of 2.11 thou/mm3 is within the normal range. This confirms a healthy number of lymphocytes.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Absolute Leukocyte Count Lymphocytes",
+          "unit": "thou/mm3",
+          "value": "2.11"
+        },
+        {
+          "explanation": "Your Absolute Leukocyte Count Monocytes of 0.34 thou/mm3 is within the normal range. This indicates a healthy number of monocytes.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Absolute Leukocyte Count Monocytes",
+          "unit": "thou/mm3",
+          "value": "0.34"
+        },
+        {
+          "explanation": "Your Absolute Leukocyte Count Eosinophils of 0.06 thou/mm3 is within the normal range. This indicates a healthy number of eosinophils.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Absolute Leukocyte Count Eosinophils",
+          "unit": "thou/mm3",
+          "value": "0.06"
+        },
+        {
+          "explanation": "Your Absolute Leukocyte Count Basophils of 0.03 thou/mm3 is within the normal range. This indicates a healthy number of basophils.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Absolute Leukocyte Count Basophils",
+          "unit": "thou/mm3",
+          "value": "0.03"
+        },
+        {
+          "explanation": "Your Platelet Count of 245.0 thou/mm3 is within the normal reference range of 150,000-450,000 /\u00b5L. Platelets are essential for blood clotting.",
+          "interpretation": "Normal",
+          "reference_range": "150000-450000 /\u00b5L",
+          "test_name": "Platelet Count",
+          "unit": "thou/mm3",
+          "value": "245.0"
+        }
+      ]
+    },
+    {
+      "id": "dc9f8b8f-c0bf-42e3-8645-588ecd038680",
+      "user_id": "b86b82aa-0225-c328-b491-268f67f1b8ff",
+      "filename": "test_report.png",
+      "file_type": "image/png",
+      "file_url": "http://localhost:5001/uploads/test_report.png",
+      "extracted_tests": [
+        "Hemoglobin",
+        "Packed Cell Volume (PCV)",
+        "RBC Count",
+        "MCV",
+        "MCH",
+        "MCHC",
+        "Red Cell Distribution Width (RDW)",
+        "Total Leukocyte Count (TLC)",
+        "Segmented Neutrophils",
+        "Lymphocytes",
+        "Monocytes",
+        "Eosinophils",
+        "Basophils",
+        "Neutrophils",
+        "Lymphocytes",
+        "Monocytes",
+        "Eosinophils",
+        "Basophils",
+        "Platelet Count"
+      ],
+      "patient_name": "Mr. NEERAJ OJHA",
+      "patient_age": null,
+      "patient_gender": null,
+      "created_at": "2026-04-27T21:02:44.442386",
+      "test_results": [
+        {
+          "concerning_findings": [
+            "Discrepancy in Hemoglobin and PCV interpretation: The reported 'High' interpretation for Hemoglobin and PCV contradicts the provided reference ranges. This needs immediate clarification with the lab or ordering physician to ensure accurate understanding of your blood oxygen-carrying capacity.",
+            "Elevated Red Blood Cell Indices (MCV, MCH, MCHC) and RDW: While not immediately critical, this pattern suggests potential issues with red blood cell size and variation. This warrants further investigation to rule out conditions like megaloblastic anemia or other red blood cell disorders that could impact oxygen delivery to muscles.",
+            "Elevated Neutrophils and Lymphocytes (percentage and absolute count): While the absolute lymphocyte count is normal, the elevated percentage of both neutrophils and lymphocytes requires attention. This could indicate a mild, subclinical inflammatory process or a past/current infection. Further evaluation may be needed to determine the cause."
+          ],
+          "dietary_recommendations": [
+            "Prioritize Protein Intake: To support your muscular health goal, ensure you are consuming adequate protein. Aim for 1.6-2.2 grams of protein per kilogram of body weight daily. Include lean sources like chicken breast, turkey, fish, lean beef, eggs, Greek yogurt, and plant-based options like lentils, beans, and tofu.",
+            "Focus on Iron-Rich Foods: Given the red blood cell findings, it's prudent to ensure sufficient iron intake. Include red meat, poultry, fish, spinach, kale, lentils, and fortified cereals. Pair iron-rich foods with Vitamin C sources (citrus fruits, bell peppers) to enhance absorption.",
+            "Include B Vitamins: Folate and Vitamin B12 are crucial for red blood cell production. Consume leafy green vegetables, legumes, whole grains, eggs, and dairy products. If you consume animal products, these are generally good sources.",
+            "Hydration is Key: Drink plenty of water throughout the day, especially around your workouts. Proper hydration is essential for overall bodily functions, including nutrient transport and muscle recovery.",
+            "Balanced Macronutrient Distribution: While protein is key for muscle building, ensure you are also consuming sufficient complex carbohydrates for energy (whole grains, sweet potatoes, oats) and healthy fats for hormone production and overall health (avocado, nuts, seeds, olive oil)."
+          ],
+          "explanation": "Faiz, your hemoglobin level of 12.0 g/dL is noted as 'High' in your report, but it falls below the reference range of 13.5-17.5 g/dL. This suggests a potential discrepancy in the interpretation provided. Hemoglobin is crucial for carrying oxygen to your muscles, which is important for your muscular health goal. We will monitor this closely.",
+          "health_summary": "Faiz, you are a healthy 22-year-old with a goal of building muscle. Your lab results show a pattern of elevated red blood cell indices (MCV, MCH, MCHC) and RDW, along with a high percentage and absolute count of neutrophils and lymphocytes. The interpretation of your Hemoglobin and PCV as 'High' appears to contradict the provided reference ranges, suggesting a potential data entry or interpretation error that needs clarification. The elevated red blood cell parameters, particularly the high RDW alongside elevated MCV, MCH, and MCHC, could suggest a type of anemia or a condition affecting red blood cell production or destruction. The elevated neutrophils and lymphocytes, while within a broad interpretation of 'high', warrant further investigation to rule out any underlying inflammatory or infectious processes. Given your age and healthy body type, these findings are not immediately alarming but require a closer look to ensure optimal health and support your muscular goals.",
+          "interpretation": "High",
+          "lifestyle_recommendations": [
+            "Consistent Strength Training: Continue with a well-structured strength training program designed to promote muscle hypertrophy. Focus on progressive overload and proper form.",
+            "Adequate Sleep: Aim for 7-9 hours of quality sleep per night. Sleep is critical for muscle repair, growth, and hormone regulation, all of which are vital for your muscular goals.",
+            "Stress Management: Chronic stress can negatively impact your immune system and recovery. Incorporate stress-reducing activities like meditation, deep breathing exercises, or spending time in nature.",
+            "Regular Medical Follow-up: Schedule a follow-up appointment with your doctor to discuss these lab results. They can order further tests to investigate the elevated red blood cell indices and white blood cell counts, and clarify the Hemoglobin/PCV interpretation.",
+            "Monitor for Symptoms: Be aware of any new or worsening symptoms such as fatigue, shortness of breath, unusual bruising, or frequent infections. Report these to your doctor promptly."
+          ],
+          "reference_range": "13.5-17.5 g/dL",
+          "test_name": "Hemoglobin",
+          "unit": "g/dL",
+          "value": "12.0"
+        },
+        {
+          "explanation": "Your Packed Cell Volume (PCV) at 37.7% is also flagged as 'High'. PCV represents the proportion of red blood cells in your blood. Similar to hemoglobin, this interpretation seems to contradict the reference range. It's important to ensure accurate lab interpretation.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Packed Cell Volume (PCV)",
+          "unit": "%",
+          "value": "37.7"
+        },
+        {
+          "explanation": "Faiz, your Red Blood Cell (RBC) count of 5.79 million/\u00b5L is within the normal reference range of 4.5-5.9 million/\u00b5L. Red blood cells are vital for oxygen transport, supporting your goal of building muscle. This result is good.",
+          "interpretation": "High",
+          "reference_range": "4.5-5.9 million/\u00b5L",
+          "test_name": "RBC Count",
+          "unit": "mill/mm3",
+          "value": "5.79"
+        },
+        {
+          "explanation": "Your Mean Corpuscular Volume (MCV) is reported as 'High' at 65.0 fL. MCV indicates the average size of your red blood cells. A higher MCV generally means your red blood cells are larger than average. This, combined with other red blood cell indices, warrants further investigation.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCV",
+          "unit": "fL",
+          "value": "65.0"
+        },
+        {
+          "explanation": "Your Mean Corpuscular Hemoglobin (MCH) is 'High' at 20.7 pg. MCH measures the average amount of hemoglobin within each red blood cell. A high MCH, alongside other elevated red blood cell parameters, suggests your red blood cells are carrying more hemoglobin than typical.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCH",
+          "unit": "pg",
+          "value": "20.7"
+        },
+        {
+          "explanation": "Your Mean Corpuscular Hemoglobin Concentration (MCHC) is 'High' at 31.9 g/dL. MCHC reflects the average concentration of hemoglobin within your red blood cells. This, along with high MCH and MCV, points towards larger red blood cells with a higher hemoglobin content.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCHC",
+          "unit": "g/dL",
+          "value": "31.9"
+        },
+        {
+          "explanation": "Faiz, your Red Cell Distribution Width (RDW) is 15.9%, which is considered 'High'. RDW measures the variation in the size of your red blood cells. An elevated RDW can indicate that there's a significant difference in the size of your red blood cells, which, when combined with other elevated red blood cell indices, needs attention.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Red Cell Distribution Width (RDW)",
+          "unit": "%",
+          "value": "15.9"
+        },
+        {
+          "explanation": "Your Total Leukocyte Count (TLC) is 4.2 thou/mm3, which is within the normal range. White blood cells are your body's defense against infection, and a normal count indicates your immune system is functioning appropriately.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Total Leukocyte Count (TLC)",
+          "unit": "thou/mm3",
+          "value": "4.2"
+        },
+        {
+          "explanation": "Your percentage of Segmented Neutrophils is 39.6%, which is interpreted as 'High'. Neutrophils are a type of white blood cell that fights bacterial infections. While a high percentage can sometimes indicate an ongoing infection or inflammation, it's important to consider this in conjunction with other counts.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Segmented Neutrophils",
+          "unit": "%",
+          "value": "39.6"
+        },
+        {
+          "explanation": "Your percentage of Lymphocytes is 50.3%, also interpreted as 'High'. Lymphocytes are another type of white blood cell crucial for immune responses, including fighting viral infections and producing antibodies. A high percentage, especially when neutrophils are also elevated, can sometimes suggest a viral process or other immune system activity.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Lymphocytes",
+          "unit": "%",
+          "value": "50.3"
+        },
+        {
+          "explanation": "Your Monocyte count is within the normal range. Monocytes are involved in fighting infections and clearing cellular debris.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Monocytes",
+          "unit": "%",
+          "value": "8.1"
+        },
+        {
+          "explanation": "Your Eosinophil count is within the normal range. Eosinophils are typically involved in allergic reactions and fighting parasitic infections.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Eosinophils",
+          "unit": "%",
+          "value": "1.4"
+        },
+        {
+          "explanation": "Your Basophil count is within the normal range. Basophils are involved in allergic responses.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Basophils",
+          "unit": "%",
+          "value": "0.6"
+        },
+        {
+          "explanation": "This test measures Neutrophils levels in your body.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Neutrophils",
+          "unit": "thou/mm3",
+          "value": "1.66"
+        },
+        {
+          "explanation": "Your percentage of Lymphocytes is 50.3%, also interpreted as 'High'. Lymphocytes are another type of white blood cell crucial for immune responses, including fighting viral infections and producing antibodies. A high percentage, especially when neutrophils are also elevated, can sometimes suggest a viral process or other immune system activity.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Lymphocytes",
+          "unit": "thou/mm3",
+          "value": "2.11"
+        },
+        {
+          "explanation": "Your Monocyte count is within the normal range. Monocytes are involved in fighting infections and clearing cellular debris.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Monocytes",
+          "unit": "thou/mm3",
+          "value": "0.34"
+        },
+        {
+          "explanation": "Your Eosinophil count is within the normal range. Eosinophils are typically involved in allergic reactions and fighting parasitic infections.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Eosinophils",
+          "unit": "thou/mm3",
+          "value": "0.06"
+        },
+        {
+          "explanation": "Your Basophil count is within the normal range. Basophils are involved in allergic responses.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Basophils",
+          "unit": "thou/mm3",
+          "value": "0.03"
+        },
+        {
+          "explanation": "Your Platelet Count is 245.0 thou/mm3, which is within the normal reference range. Platelets are essential for blood clotting, and this result is good.",
+          "interpretation": "Normal",
+          "reference_range": "150000-450000 /\u00b5L",
+          "test_name": "Platelet Count",
+          "unit": "thou/mm3",
+          "value": "245.0"
+        }
+      ]
+    },
+    {
+      "id": "24666ac0-33d5-4796-b007-2be27fc021f3",
+      "user_id": "b86b82aa-0225-c328-b491-268f67f1b8ff",
+      "filename": "test_report.png",
+      "file_type": "image/png",
+      "file_url": "http://localhost:5001/uploads/test_report.png",
+      "extracted_tests": [
+        "Hemoglobin",
+        "Packed Cell Volume (PCV)",
+        "RBC Count",
+        "MCV",
+        "MCH",
+        "MCHC",
+        "Red Cell Distribution Width (RDW)",
+        "Total Leukocyte Count (TLC)",
+        "Segmented Neutrophils",
+        "Lymphocytes",
+        "Monocytes",
+        "Eosinophils",
+        "Basophils",
+        "Neutrophils",
+        "Lymphocytes",
+        "Monocytes",
+        "Eosinophils",
+        "Basophils",
+        "Platelet Count"
+      ],
+      "patient_name": "Mr. NEERAJ OJHA",
+      "patient_age": null,
+      "patient_gender": null,
+      "created_at": "2026-04-27T21:07:59.502723",
+      "test_results": [
+        {
+          "concerning_findings": [
+            "Elevated Hemoglobin, PCV, RBC Count, MCV, MCH, MCHC, and RDW: These collectively point towards a potential issue with red blood cell production or regulation. While not immediately life-threatening, this pattern requires medical evaluation to rule out conditions like polycythemia or other underlying causes. It's crucial to discuss these with your doctor.",
+            "Elevated Segmented Neutrophils (percentage) and Neutrophils (absolute count): While often associated with infection or inflammation, in the context of elevated red blood cells, it's important to have this assessed by a physician to understand the complete picture."
+          ],
+          "dietary_recommendations": [
+            "Focus on a balanced diet rich in lean proteins, complex carbohydrates, and healthy fats to support muscle growth and energy levels.",
+            "Ensure adequate intake of iron-rich foods (e.g., lean red meat, spinach, lentils, fortified cereals) as iron is a key component of hemoglobin. However, given your elevated hemoglobin, it's crucial to discuss iron supplementation with your doctor before making significant changes.",
+            "Include plenty of fruits and vegetables for vitamins, minerals, and antioxidants, which are vital for overall health and recovery.",
+            "Prioritize hydration by drinking plenty of water throughout the day, especially around workouts.",
+            "Consider incorporating foods rich in B vitamins (e.g., whole grains, eggs, dairy) which play a role in red blood cell formation."
+          ],
+          "explanation": "Faiz, your hemoglobin level of 12.0 g/dL is noted as 'High' relative to the reference range of 13.5-17.5 g/dL. This protein in your red blood cells carries oxygen. While a higher level can sometimes be associated with better oxygen delivery, in your case, it's slightly outside the typical range and needs to be considered alongside other red blood cell parameters.",
+          "health_summary": "Faiz, your lab results show a consistent pattern of elevated red blood cell parameters, including Hemoglobin, PCV, RBC Count, MCV, MCH, and MCHC. This suggests a higher than normal concentration and volume of red blood cells, with each cell carrying more hemoglobin. The elevated RDW indicates a wider variation in red blood cell sizes.  While your white blood cell count is normal overall, there's a high percentage of both segmented neutrophils and lymphocytes, though the absolute lymphocyte count is normal. The absolute neutrophil count is elevated.  These findings, particularly the red blood cell picture, warrant further investigation to understand the underlying cause. Given your health goal of becoming muscular and your healthy body type, it's important to ensure these elevated red blood cell markers are not indicative of a condition that could impact your overall health and training.",
+          "interpretation": "High",
+          "lifestyle_recommendations": [
+            "Consult with your physician immediately to discuss the elevated red blood cell parameters. They will likely recommend further tests to determine the cause.",
+            "Continue with your healthy lifestyle and training regimen aimed at building muscle, but ensure you are listening to your body and not overtraining.",
+            "Maintain a consistent sleep schedule, as adequate rest is crucial for muscle recovery and overall health.",
+            "Manage stress effectively through techniques like meditation, deep breathing exercises, or engaging in hobbies you enjoy.",
+            "Avoid smoking and excessive alcohol consumption, as these can negatively impact cardiovascular health and blood parameters."
+          ],
+          "reference_range": "13.5-17.5 g/dL",
+          "test_name": "Hemoglobin",
+          "unit": "g/dL",
+          "value": "12.0"
+        },
+        {
+          "explanation": "Your Packed Cell Volume (PCV) at 37.7% is also interpreted as 'High'. This measures the proportion of your blood volume that consists of red blood cells. Similar to hemoglobin, an elevated PCV suggests a higher concentration of red blood cells.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Packed Cell Volume (PCV)",
+          "unit": "%",
+          "value": "37.7"
+        },
+        {
+          "explanation": "Faiz, your Red Blood Cell (RBC) count of 5.79 million/\u00b5L is considered 'High' within the reference range of 4.5-5.9 million/\u00b5L. This indicates a higher than average number of red blood cells circulating in your blood.",
+          "interpretation": "High",
+          "reference_range": "4.5-5.9 million/\u00b5L",
+          "test_name": "RBC Count",
+          "unit": "mill/mm3",
+          "value": "5.79"
+        },
+        {
+          "explanation": "The Mean Corpuscular Volume (MCV) of 65.0 fL is interpreted as 'High'. This measurement reflects the average size of your red blood cells. A high MCV suggests that your red blood cells are larger than typical.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCV",
+          "unit": "fL",
+          "value": "65.0"
+        },
+        {
+          "explanation": "Your Mean Corpuscular Hemoglobin (MCH) at 20.7 pg is also interpreted as 'High'. This indicates that, on average, each of your red blood cells contains a higher amount of hemoglobin.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCH",
+          "unit": "pg",
+          "value": "20.7"
+        },
+        {
+          "explanation": "The Mean Corpuscular Hemoglobin Concentration (MCHC) of 31.9 g/dL is interpreted as 'High'. This reflects the average concentration of hemoglobin within your red blood cells. A high MCHC suggests that your red blood cells are carrying a higher concentration of hemoglobin.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "MCHC",
+          "unit": "g/dL",
+          "value": "31.9"
+        },
+        {
+          "explanation": "Faiz, your Red Cell Distribution Width (RDW) of 15.9% is interpreted as 'High'. This measures the variation in the size of your red blood cells. A high RDW indicates that there is a greater variation in the size of your red blood cells than is typical.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Red Cell Distribution Width (RDW)",
+          "unit": "%",
+          "value": "15.9"
+        },
+        {
+          "explanation": "Your Total Leukocyte Count (TLC) of 4.2 thou/mm3 is within the 'Normal' range. This represents the total number of white blood cells in your blood, which are crucial for fighting infection.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Total Leukocyte Count (TLC)",
+          "unit": "thou/mm3",
+          "value": "4.2"
+        },
+        {
+          "explanation": "The percentage of Segmented Neutrophils at 39.6% is interpreted as 'High'. Neutrophils are a type of white blood cell that are important for fighting bacterial infections. While the percentage is high, it's important to look at the absolute count.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Segmented Neutrophils",
+          "unit": "%",
+          "value": "39.6"
+        },
+        {
+          "explanation": "Your absolute Lymphocyte count of 2.11 thou/mm3 is within the 'Normal' range. This is the actual number of lymphocytes in your blood.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Lymphocytes",
+          "unit": "%",
+          "value": "50.3"
+        },
+        {
+          "explanation": "Your absolute Monocyte count of 0.34 thou/mm3 is within the 'Normal' range.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Monocytes",
+          "unit": "%",
+          "value": "8.1"
+        },
+        {
+          "explanation": "Your absolute Eosinophil count of 0.06 thou/mm3 is within the 'Normal' range.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Eosinophils",
+          "unit": "%",
+          "value": "1.4"
+        },
+        {
+          "explanation": "Your absolute Basophil count of 0.03 thou/mm3 is within the 'Normal' range.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Basophils",
+          "unit": "%",
+          "value": "0.6"
+        },
+        {
+          "explanation": "Faiz, your absolute Neutrophil count of 1.66 thou/mm3 is interpreted as 'High'. This is the actual number of neutrophils in your blood, and it's elevated.",
+          "interpretation": "High",
+          "reference_range": null,
+          "test_name": "Neutrophils",
+          "unit": "thou/mm3",
+          "value": "1.66"
+        },
+        {
+          "explanation": "Your absolute Lymphocyte count of 2.11 thou/mm3 is within the 'Normal' range. This is the actual number of lymphocytes in your blood.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Lymphocytes",
+          "unit": "thou/mm3",
+          "value": "2.11"
+        },
+        {
+          "explanation": "Your absolute Monocyte count of 0.34 thou/mm3 is within the 'Normal' range.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Monocytes",
+          "unit": "thou/mm3",
+          "value": "0.34"
+        },
+        {
+          "explanation": "Your absolute Eosinophil count of 0.06 thou/mm3 is within the 'Normal' range.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Eosinophils",
+          "unit": "thou/mm3",
+          "value": "0.06"
+        },
+        {
+          "explanation": "Your absolute Basophil count of 0.03 thou/mm3 is within the 'Normal' range.",
+          "interpretation": "Normal",
+          "reference_range": null,
+          "test_name": "Basophils",
+          "unit": "thou/mm3",
+          "value": "0.03"
+        },
+        {
+          "explanation": "Faiz, your Platelet Count of 245.0 thou/mm3 is within the 'Normal' reference range of 150,000-450,000 /\u00b5L. Platelets are essential for blood clotting.",
+          "interpretation": "Normal",
+          "reference_range": "150000-450000 /\u00b5L",
+          "test_name": "Platelet Count",
+          "unit": "thou/mm3",
+          "value": "245.0"
+        }
+      ]
+    }
   ]
 }

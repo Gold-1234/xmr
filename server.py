@@ -8,6 +8,7 @@ import uuid
 import hashlib
 from datetime import datetime
 import base64
+from pathlib import Path
 from main import analyze_report_api
 from dotenv import load_dotenv
 from modules.analyzer import extract_dates_from_text_regex
@@ -19,6 +20,66 @@ CORS(app)
 
 # Get port from environment or default
 port = int(os.environ.get('PORT', 5001))
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIST_DIR = BASE_DIR / 'frontend' / 'dist'
+
+
+def frontend_build_exists():
+    return (FRONTEND_DIST_DIR / 'index.html').exists()
+
+
+@app.route('/', methods=['GET'])
+def frontend_index():
+    """Serve the built frontend when available, otherwise show a helpful landing page."""
+    if frontend_build_exists():
+        return send_from_directory(str(FRONTEND_DIST_DIR), 'index.html')
+
+    return """
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>XMR API Server</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            max-width: 760px;
+            margin: 48px auto;
+            padding: 0 20px;
+            line-height: 1.5;
+            color: #1f2937;
+          }
+          code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>XMR backend is running</h1>
+        <p>This Flask server provides the API and upload endpoints.</p>
+        <p>To open the frontend during development, run:</p>
+        <p><code>cd frontend</code></p>
+        <p><code>npm install</code></p>
+        <p><code>npm run dev</code></p>
+        <p>Then open <code>http://localhost:5173</code>.</p>
+        <p>If you build the frontend with <code>npm run build</code>, this server will automatically serve it from <code>http://localhost:{port}/</code>.</p>
+      </body>
+    </html>
+    """
+
+
+@app.route('/<path:path>', methods=['GET'])
+def frontend_assets(path):
+    """Serve built frontend assets when present."""
+    if frontend_build_exists():
+        asset_path = FRONTEND_DIST_DIR / path
+        if asset_path.exists() and asset_path.is_file():
+            return send_from_directory(str(FRONTEND_DIST_DIR), path)
+
+    return jsonify({'error': 'Not found'}), 404
 
 # Serve uploaded files
 @app.route('/uploads/<filename>')
@@ -134,36 +195,85 @@ def upload_report():
                     page_result = process_pdf_pages_with_llm(temp_file_path)
 
                     if page_result:
+                        # Convert page result to the format expected by the rest of the system
                         result = convert_page_based_result_to_response(page_result, user_profile)
+                        print(f"✅ Page-by-page analysis complete: {len(result.get('tests', []))} tests found")
+
+                        # Generate AI summary for the tests
                         if result.get('tests'):
                             from modules.analyzer import generate_personalized_analysis
                             result['tests'] = generate_personalized_analysis(
-                                result['tests'], user_profile,
-                                tests_by_date=result.get('tests_by_date'),
-                                date_order=result.get('date_order')
+                                result['tests'],
+                                user_profile,
+                                result.get('tests_by_date'),
+                                result.get('date_order')
                             )
-                        print(f"✅ Page-by-page analysis complete: {len(result.get('tests', []))} tests found")
+                            print("✅ AI summary generated for page-based results")
                     else:
                         print("❌ Page-by-page processing failed, falling back to legacy processing")
                         result = analyze_report_api(temp_file_path, user_profile, fast_mode=False)
                         result = convert_legacy_result_to_response(result, user_profile)
 
                 else:
-                    # For images, single-pass LLM analysis
-                    print("🖼️  Processing image with OCR + LLM analysis...")
-                    from modules.analyzer import group_tests_by_date, convert_new_llm_format_to_legacy
+                    # For images, use the OCR pipeline
+                    print("🖼️  Processing image with OCR...")
 
-                    result = analyze_report_api(temp_file_path, user_profile, fast_mode=False)
+                    # Check if fast mode is requested
+                    fast_mode = request.args.get('fast', '').lower() in ['true', '1', 'yes']
+                    if fast_mode:
+                        print("⚡ FAST MODE ENABLED - Using regex analysis only")
+                        result = analyze_report_api(temp_file_path, user_profile, fast_mode)
+                        print(f"✅ Fast mode analysis complete: {len(result.get('tests', []))} tests found")
+                    else:
+                        print("🚀 TWO-PHASE ANALYSIS: Fast analysis first, then detailed LLM analysis with date grouping")
+                        # Phase 1: Fast analysis for immediate results
+                        try:
+                            fast_result = analyze_report_api(temp_file_path, user_profile, fast_mode=True)
+                            print(f"✅ Fast analysis complete: {len(fast_result.get('tests', []))} tests found")
+                        except Exception as fast_error:
+                            print(f"❌ Fast analysis failed: {fast_error}")
+                            fast_result = {"patient": {"name": None, "age": None, "gender": None}, "tests": []}
 
-                    llm_data = result.get('xmr_raw_data') if isinstance(result, dict) else None
-                    if isinstance(result, list):
-                        result = convert_new_llm_format_to_legacy(result)
+                        # Phase 2: Detailed LLM analysis with date grouping
+                        try:
+                            detailed_result = analyze_report_api(temp_file_path, user_profile, fast_mode=False)
+                            print(f"✅ Detailed analysis complete: {len(detailed_result.get('tests', []))} tests found")
 
-                    date_grouping = group_tests_by_date("", result.get('tests', []), llm_data)
-                    result['tests_by_date'] = date_grouping['tests_by_date']
-                    result['date_order'] = date_grouping['date_order']
-                    result['analysis_complete'] = True
-                    print(f"✅ Analysis complete: {len(result.get('tests', []))} tests found")
+                            # Group tests by date for better organization
+                            from modules.analyzer import group_tests_by_date, convert_new_llm_format_to_legacy
+
+                            # First check if we have LLM structured data
+                            llm_data = None
+                            if hasattr(detailed_result, 'get') and 'xmr_raw_data' in detailed_result:
+                                llm_data = detailed_result['xmr_raw_data']
+                                print(f"📊 Found LLM structured data for date grouping: {type(llm_data)}")
+
+                            # Convert detailed result back to legacy format if needed
+                            if isinstance(detailed_result, list):
+                                detailed_result = convert_new_llm_format_to_legacy(detailed_result)
+
+                            # Group tests by date
+                            date_grouping = group_tests_by_date("", detailed_result.get('tests', []), llm_data)
+                            detailed_result['tests_by_date'] = date_grouping['tests_by_date']
+                            detailed_result['date_order'] = date_grouping['date_order']
+                            dated_result = detailed_result
+                            print("✅ Date grouping applied to results")
+                        except Exception as detailed_error:
+                            print(f"❌ Detailed analysis failed: {detailed_error}")
+                            detailed_result = fast_result  # Fallback to fast result
+                            dated_result = detailed_result  # No date grouping if analysis failed
+
+                        # Combine results: use detailed data with date grouping
+                        result = {
+                            'basic_analysis': fast_result,
+                            'detailed_analysis': detailed_result,
+                            'patient': dated_result.get('patient', detailed_result.get('patient', fast_result.get('patient'))),
+                            'tests': dated_result.get('tests', detailed_result.get('tests', fast_result.get('tests'))),
+                            'tests_by_date': dated_result.get('tests_by_date', {}),
+                            'date_order': dated_result.get('date_order', []),
+                            'analysis_complete': True
+                        }
+                        print("✅ Combined analysis with date grouping ready")
 
             # Validate result structure
             if not isinstance(result, dict):
@@ -652,6 +762,63 @@ def save_report():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/trends/<user_id>/<path:test_name>', methods=['GET'])
+def get_trends(user_id, test_name):
+    """Get trend data for a specific test across all user reports."""
+    try:
+        from modules.database import get_test_trends, get_user_reports
+        # Try dedicated trend function first
+        trends = get_test_trends(user_id, test_name)
+
+        # get_test_trends may return incomplete data — enrich with report info
+        if trends:
+            # Add filename from reports for provenance display
+            try:
+                reports = get_user_reports(user_id)
+                report_map = {r['id']: r.get('filename', '') for r in reports}
+                for t in trends:
+                    if 'report_id' not in t:
+                        t['report_id'] = ''
+                    if 'filename' not in t:
+                        t['filename'] = report_map.get(t.get('report_id', ''), '')
+                    if 'report_date' not in t or not t['report_date']:
+                        t['report_date'] = t.get('created_at', '')
+            except Exception:
+                pass
+        else:
+            # Fallback: scan all reports manually (case-insensitive)
+            try:
+                from modules.database import get_report_details
+                reports = get_user_reports(user_id)
+                test_name_lower = test_name.lower()
+                for report in reports:
+                    detail = get_report_details(report['id'])
+                    if not detail:
+                        continue
+                    for test in detail.get('test_results', []):
+                        if test.get('test_name', '').lower() == test_name_lower:
+                            trends.append({
+                                'report_id': report['id'],
+                                'filename': report.get('filename', ''),
+                                'test_name': test.get('test_name', test_name),
+                                'value': test.get('value', ''),
+                                'unit': test.get('unit'),
+                                'reference_range': test.get('reference_range'),
+                                'interpretation': test.get('interpretation', 'Unknown'),
+                                'report_date': report.get('created_at', ''),
+                                'created_at': report.get('created_at', ''),
+                            })
+                            break
+            except Exception as fallback_err:
+                print(f"Trend fallback error: {fallback_err}")
+
+        trends.sort(key=lambda x: x.get('report_date', ''))
+        return jsonify({'trends': trends, 'test_name': test_name})
+    except Exception as e:
+        print(f"Trends error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/auth/login', methods=['POST'])
 def login():
     """Direct login - create user with email and return user ID."""
@@ -684,84 +851,6 @@ def login():
     except Exception as e:
         print(f"Login error: {e}")
         return jsonify({'error': str(e)}), 500
-
-@app.route('/livekit-token', methods=['POST'])
-def livekit_token():
-    """Generate a LiveKit token and dispatch the medical-assistant agent."""
-    import asyncio
-    data = request.get_json() or {}
-    room_name = data.get('room_name', f'medical-{uuid.uuid4().hex[:8]}')
-    identity = data.get('identity', 'user')
-
-    lk_url = os.getenv('LIVEKIT_URL')
-    lk_api_key = os.getenv('LIVEKIT_API_KEY')
-    lk_api_secret = os.getenv('LIVEKIT_API_SECRET')
-
-    if not all([lk_url, lk_api_key, lk_api_secret]):
-        return jsonify({'error': 'LiveKit not configured — set LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET'}), 500
-
-    try:
-        from livekit.api import AccessToken, VideoGrants
-        token = (
-            AccessToken(lk_api_key, lk_api_secret)
-            .with_identity(identity)
-            .with_name('Medical Assistant User')
-            .with_grants(VideoGrants(
-                room_join=True,
-                room=room_name,
-                can_publish=True,
-                can_subscribe=True,
-                can_publish_data=True,
-            ))
-            .to_jwt()
-        )
-    except Exception as e:
-        print(f'Token generation failed: {e}')
-        return jsonify({'error': str(e)}), 500
-
-    # Build metadata for the agent: user profile + current report + all saved reports
-    user_id = data.get('user_id')
-    user_profile = data.get('user_profile') or {}
-    patient_info = data.get('patient_info') or {}
-    extracted_tests = data.get('extracted_tests') or []
-
-    saved_reports = []
-    if user_id:
-        try:
-            from modules.database import get_user_reports
-            saved_reports = get_user_reports(user_id) or []
-        except Exception as e:
-            print(f'Could not fetch saved reports: {e}')
-
-    agent_metadata = json.dumps({
-        'user_id': user_id,
-        'user_profile': user_profile,
-        'patient_info': patient_info,
-        'extracted_tests': extracted_tests[:30],
-        'saved_reports': saved_reports[:10],
-    })
-
-    # Dispatch the agent to the room with metadata
-    async def _dispatch():
-        from livekit.api import LiveKitAPI
-        from livekit.protocol.agent_dispatch import CreateAgentDispatchRequest
-        async with LiveKitAPI(lk_url, lk_api_key, lk_api_secret) as lk:
-            await lk.agent_dispatch.create_dispatch(
-                CreateAgentDispatchRequest(
-                    agent_name='medical-assistant',
-                    room=room_name,
-                    metadata=agent_metadata,
-                )
-            )
-
-    try:
-        asyncio.run(_dispatch())
-        print(f'Agent dispatched to room: {room_name}')
-    except Exception as e:
-        print(f'Agent dispatch failed (agent may not be running): {e}')
-
-    return jsonify({'token': token, 'room_name': room_name, 'url': lk_url})
-
 
 @app.route('/voice-chat', methods=['POST'])
 def voice_chat():
@@ -903,4 +992,11 @@ Please provide helpful general health information and wellness tips. If the ques
 
 if __name__ == '__main__':
     print(f"Starting server on port {port}")
-    app.run(debug=True, host='0.0.0.0', port=port, threaded=True)
+    debug_mode = os.environ.get('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes')
+    app.run(
+        debug=debug_mode,
+        use_reloader=False,
+        host='0.0.0.0',
+        port=port,
+        threaded=True,
+    )

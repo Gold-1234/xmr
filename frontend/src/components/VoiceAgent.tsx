@@ -215,9 +215,7 @@ const VoiceAgent: React.FC<VoiceAgentProps> = ({
           <span>·</span>
           <span>Multilingual</span>
         </div>
-      </div>
-    );
-  }
+      )}
 
   return (
     <div className="card overflow-hidden">
@@ -230,7 +228,15 @@ const VoiceAgent: React.FC<VoiceAgentProps> = ({
           onClick={handleDisconnect}
           className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
         >
-          Disconnect
+          {status === 'processing' ? (
+            <Loader2 className="w-10 h-10 animate-spin" />
+          ) : status === 'speaking' ? (
+            <Volume2 className="w-10 h-10" />
+          ) : status === 'recording' ? (
+            <MicOff className="w-10 h-10" />
+          ) : (
+            <Mic className="w-10 h-10" />
+          )}
         </button>
       </div>
       <div className="p-4">

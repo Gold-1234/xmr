@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, FileText, Calendar, Stethoscope, Loader2 } from 'lucide-react';
+import { backendUrl, readJsonResponse } from '../utils/api';
 
 interface ExtractedInfo {
   pages: Array<{
@@ -18,8 +19,6 @@ const OpenAIExtractor: React.FC = () => {
   const [extracting, setExtracting] = useState(false);
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo | null>(null);
   const [error, setError] = useState<string>('');
-
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -52,8 +51,8 @@ const OpenAIExtractor: React.FC = () => {
         method: 'POST',
         body: formData,
       });
-	  console.log(response)
-      const result = await response.json();
+      console.log(response);
+      const result = await readJsonResponse<any>(response);
 
       if (response.ok) {
         setExtractedInfo(result);
@@ -72,7 +71,7 @@ const OpenAIExtractor: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-        OpenAI PDF Extractor
+        PDF Extractor
       </h2>
 
       <div className="space-y-6">
@@ -91,7 +90,7 @@ const OpenAIExtractor: React.FC = () => {
               {selectedFile ? selectedFile.name : 'Click to select a PDF file'}
             </p>
             <p className="text-sm text-gray-500">
-              Only PDF files are supported for OpenAI processing
+              Only PDF files are supported
             </p>
           </label>
         </div>
@@ -119,7 +118,7 @@ const OpenAIExtractor: React.FC = () => {
           {extracting ? (
             <>
               <Loader2 className="animate-spin w-5 h-5" />
-              <span>Processing PDF with OpenAI...</span>
+              <span>Processing PDF…</span>
             </>
           ) : (
             <>
@@ -281,13 +280,10 @@ const OpenAIExtractor: React.FC = () => {
           <ol className="text-blue-700 text-sm space-y-1 list-decimal list-inside">
             <li>Upload a PDF medical report</li>
             <li>Each page is converted to an image</li>
-            <li>OpenAI Vision OCR extracts text from each page</li>
-            <li>OpenAI's AI analyzes the text to identify dates and medical report types</li>
+            <li>OCR extracts text from each page</li>
+            <li>Text is analyzed to identify dates and medical report types</li>
             <li>Results are aggregated and displayed with page-by-page breakdown</li>
           </ol>
-          <p className="text-xs text-blue-600 mt-2">
-            Note: Requires OpenAI API credentials to be configured on the server.
-          </p>
         </div>
       </div>
     </div>

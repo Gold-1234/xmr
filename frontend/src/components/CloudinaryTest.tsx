@@ -1,13 +1,12 @@
 import { log } from 'console';
 import React, { useState } from 'react';
+import { backendUrl, readJsonResponse } from '../utils/api';
 
 const CloudinaryTest: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [error, setError] = useState<string>('');
-
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -46,9 +45,9 @@ const CloudinaryTest: React.FC = () => {
         method: 'POST',
         body: formData,
       });
-	  console.log(response);
-	  
-      const result = await response.json();
+      console.log(response);
+
+      const result = await readJsonResponse<any>(response);
 
       if (response.ok) {
         setUploadResult(result);
