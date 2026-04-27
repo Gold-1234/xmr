@@ -1,0 +1,3 @@
+livekit-agents[turn-detector,google]
+livekit-plugins-noise-cancellation
+av

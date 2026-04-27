@@ -2,14 +2,13 @@ flask
 flask-cors
 python-dotenv
 google-genai
+google-cloud-vision
 pillow
 opencv-python
 pdfplumber
 PyMuPDF
-supabase
+supabase==2.10.1
 cloudinary
 requests
 gunicorn
-livekit-agents[silero,turn-detector]
-livekit-plugins-noise-cancellation
-av==17.0.0
+livekit-api

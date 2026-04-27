@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Loader2, Save } from 'lucide-react';
 import VoiceAgent from './VoiceAgent';
 
@@ -27,10 +27,15 @@ interface UploadedFile {
   type: string;
 }
 
+interface UploadedFileWithName extends UploadedFile {
+  name: string;
+}
+
 interface ReportProps {
   extractedTests: Test[];
   patientInfo: Patient | null;
   uploadedFile: UploadedFile | null;
+  uploadedFiles?: UploadedFileWithName[];
   analysisPhase: 'none' | 'basic' | 'detailed';
   basicAnalysis: Test[];
   analysisResult: any;
@@ -39,6 +44,8 @@ interface ReportProps {
   handleSaveReport: () => void;
   saving: boolean;
   saved: boolean;
+  userId?: string;
+  userProfile?: any;
 }
 
 interface TestsByDate {
@@ -49,6 +56,7 @@ const Report: React.FC<ReportProps> = ({
   extractedTests,
   patientInfo,
   uploadedFile,
+  uploadedFiles,
   analysisPhase,
   basicAnalysis,
   analysisResult,
@@ -56,16 +64,24 @@ const Report: React.FC<ReportProps> = ({
   uploading,
   handleSaveReport,
   saving,
-  saved
+  saved,
+  userId,
+  userProfile,
 }) => {
+  const [activeTab, setActiveTab] = useState(0);
+
   // Sort tests by interpretation priority: Abnormal (High/Low) -> Normal -> Unknown
   const sortedTests = [...extractedTests].sort((a, b) => {
     const priority = { 'High': 4, 'Low': 4, 'Normal': 2, 'Unknown': 1 };
     return priority[b.interpretation] - priority[a.interpretation];
   });
 
-  const isPDF = uploadedFile?.type === 'application/pdf';
-  const isImage = uploadedFile?.type.startsWith('image/');
+  // Use the active tab's file if multiple files uploaded, otherwise fall back to uploadedFile
+  const files = uploadedFiles && uploadedFiles.length > 0 ? uploadedFiles : (uploadedFile ? [{ ...uploadedFile, name: 'Report' }] : []);
+  const activeFile = files[activeTab] ?? null;
+
+  const isPDF = activeFile?.type === 'application/pdf';
+  const isImage = activeFile?.type.startsWith('image/');
 
   // Get summary data from the first test (where LLM stores summary data)
   const summaryData = extractedTests.length > 0 ? extractedTests[0] : null;
@@ -93,7 +109,8 @@ const Report: React.FC<ReportProps> = ({
   return (
     <div className="space-y-6">
       {/* Report || Summary Layout */}
-      {uploadedFile && (
+      {activeFile && (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column: Uploaded Report */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -103,6 +120,7 @@ const Report: React.FC<ReportProps> = ({
                 <input
                   type="file"
                   accept=".pdf,.png,.jpg,.jpeg"
+                  multiple
                   onChange={onFileSelect}
                   disabled={uploading}
                   className="hidden"
@@ -113,18 +131,36 @@ const Report: React.FC<ReportProps> = ({
               </label>
             </div>
 
+            {/* File tabs — only shown when multiple files uploaded */}
+            {files.length > 1 && (
+              <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+                {files.map((f, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveTab(i)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${
+                      activeTab === i
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
-              {isPDF && uploadedFile && (
+              {isPDF && activeFile && (
                 <div className="w-full">
-                  {uploadedFile?.url && (console.log('📄 PDF viewer URL:', uploadedFile?.url), null)}
                   <iframe
-                    src={`${uploadedFile.url}#toolbar=0&navpanes=0&scrollbar=0`}
+                    src={`${activeFile.url}#toolbar=0&navpanes=0&scrollbar=0`}
                     className="w-full h-[400px] rounded-lg border-0"
                     title="Medical Report PDF"
                     onError={async (e) => {
                       console.error('🚨 PDF iframe failed to load:', {
                         error: e,
-                        url: uploadedFile.url,
+                        url: activeFile.url,
                         iframe: e.currentTarget,
                         timestamp: new Date().toISOString(),
                         userAgent: navigator.userAgent
@@ -133,7 +169,7 @@ const Report: React.FC<ReportProps> = ({
                       // Try to fetch the URL manually to check accessibility
                       try {
                         console.log('🔍 Testing manual fetch of PDF URL...');
-                        const response = await fetch(uploadedFile.url, {
+                        const response = await fetch(activeFile.url, {
                           method: 'HEAD',
                           mode: 'cors'
                         });
@@ -141,7 +177,7 @@ const Report: React.FC<ReportProps> = ({
                           status: response.status,
                           statusText: response.statusText,
                           headers: Object.fromEntries(response.headers.entries()),
-                          url: uploadedFile.url,
+                          url: activeFile.url,
                           ok: response.ok,
                           contentType: response.headers.get('content-type'),
                           contentLength: response.headers.get('content-length')
@@ -149,7 +185,7 @@ const Report: React.FC<ReportProps> = ({
                       } catch (fetchError) {
                         console.error('🚨 Manual fetch also failed:', {
                           error: fetchError,
-                          url: uploadedFile.url,
+                          url: activeFile.url,
                           message: fetchError instanceof Error ? fetchError.message : 'Unknown error'
                         });
                       }
@@ -158,7 +194,7 @@ const Report: React.FC<ReportProps> = ({
                       console.log('🔄 Retrying without URL parameters...');
                       const iframeWithoutParams = e.currentTarget.parentElement?.querySelector('.iframe-retry') as HTMLIFrameElement;
                       if (iframeWithoutParams) {
-                        iframeWithoutParams.src = uploadedFile.url;
+                        iframeWithoutParams.src = activeFile.url;
                         iframeWithoutParams.style.display = 'block';
                         e.currentTarget.style.display = 'none';
                         return;
@@ -180,7 +216,7 @@ const Report: React.FC<ReportProps> = ({
                     title="Medical Report PDF (Retry)"
                     onError={(e) => {
                       console.error('🚨 Retry iframe also failed:', {
-                        url: uploadedFile.url,
+                        url: activeFile.url,
                         error: e
                       });
                       e.currentTarget.style.display = 'none';
@@ -197,7 +233,7 @@ const Report: React.FC<ReportProps> = ({
                       <p className="text-xs mt-2 text-gray-400">Check console (F12) for detailed error logs</p>
                     </div>
                     <a
-                      href={uploadedFile.url}
+                      href={activeFile.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-lg"
@@ -207,9 +243,9 @@ const Report: React.FC<ReportProps> = ({
                   </div>
                 </div>
               )}
-              {isImage && uploadedFile && (
+              {isImage && activeFile && (
                 <img
-                  src={uploadedFile.url}
+                  src={activeFile.url}
                   alt="Medical Report"
                   className="w-full max-h-[400px] object-contain rounded-lg"
                   onError={(e) => {
@@ -227,12 +263,6 @@ const Report: React.FC<ReportProps> = ({
                   <p className="text-sm">Analysis in progress...</p>
                 </div>
               )}
-
-              {/* Voice Agent - Integrated into Uploaded Report Section */}
-              <VoiceAgent
-                patientInfo={patientInfo}
-                extractedTests={extractedTests}
-              />
             </div>
           </div>
 
@@ -316,10 +346,18 @@ const Report: React.FC<ReportProps> = ({
             </div>
           </div>
         </div>
+        {/* Voice Agent - Full width below the two-column grid */}
+        <VoiceAgent
+          patientInfo={patientInfo}
+          extractedTests={extractedTests}
+          userId={userId}
+          userProfile={userProfile}
+        />
+        </>
       )}
 
       {/* Separator Line */}
-      {uploadedFile && extractedTests.length > 0 && (
+      {activeFile && extractedTests.length > 0 && (
         <div className="flex items-center justify-center py-4">
           <div className="flex-1 h-px bg-gray-300"></div>
           <span className="px-4 text-gray-500 font-medium">Detailed Results</span>

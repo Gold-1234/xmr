@@ -32,6 +32,7 @@ interface DashboardProps {
 export default function Dashboard({ onFileUpload, onGoToReports, onGoToGoogleVision }: DashboardProps) {
   const { user, logout } = useAuth();
   const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
   const [uploadedFile, setUploadedFile] = useState<{ url: string; originalUrl: string; type: string } | null>(null);
   const [patientInfo, setPatientInfo] = useState<Patient | null>(null);
   const [extractedTests, setExtractedTests] = useState<Test[]>([]);
@@ -40,8 +41,12 @@ export default function Dashboard({ onFileUpload, onGoToReports, onGoToGoogleVis
   const [saved, setSaved] = useState(false);
   const [fastMode, setFastMode] = useState(false);
   const [analysisPhase, setAnalysisPhase] = useState<'none' | 'basic' | 'detailed'>('none');
-  const [basicAnalysis, setBasicAnalysis] = useState<Test[]>([]);
+  const [basicAnalysis] = useState<Test[]>([]);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ url: string; originalUrl: string; type: string; name: string }>>([]);
+  const [individualResults, setIndividualResults] = useState<Array<{
+    filename: string; fileType: string; fileUrl: string; patient: Patient | null; tests: Test[];
+  }>>([]);
 
   // Debug logging
   console.log('🖥️ Dashboard render:', {
@@ -69,107 +74,151 @@ export default function Dashboard({ onFileUpload, onGoToReports, onGoToGoogleVis
     return priority[b.interpretation] - priority[a.interpretation];
   });
 
+  const uploadSingleFile = async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (user?.profile) {
+      formData.append('user_profile', JSON.stringify(user.profile));
+    }
+    const response = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/upload${fastMode ? '?fast=true' : ''}`,
+      { method: 'POST', body: formData }
+    );
+    if (!response.ok) throw new Error(`Upload failed for ${file.name}`);
+    const result = await response.json();
+    if (result.error) throw new Error(result.error);
+    return result;
+  };
+
+  const mergeResults = (results: any[], files: File[]) => {
+    const allTests: Test[] = [];
+    const mergedByDate: Record<string, Test[]> = {};
+    const dateSet = new Set<string>();
+    let patient = null;
+    let firstFileUrl = '';
+    let firstFileType = '';
+    let firstDisplayUrl = '';
+
+    results.forEach((result, i) => {
+      const file = files[i];
+      const backendUrl = result.fileUrl || '';
+      const displayUrl = backendUrl.startsWith('http://localhost') || backendUrl.startsWith('blob:')
+        ? URL.createObjectURL(file)
+        : backendUrl;
+
+      if (i === 0) {
+        patient = result.patient;
+        firstFileUrl = backendUrl;
+        firstFileType = file.type;
+        firstDisplayUrl = displayUrl;
+      }
+
+      const tests: Test[] = result.tests || [];
+      allTests.push(...tests);
+
+      const byDate: Record<string, Test[]> = result.tests_by_date || {};
+      const order: string[] = result.date_order || [];
+      order.forEach(date => {
+        dateSet.add(date);
+        mergedByDate[date] = [...(mergedByDate[date] || []), ...(byDate[date] || [])];
+      });
+
+      // If no date grouping, bucket under file name as date label
+      if (order.length === 0 && tests.length > 0) {
+        const label = file.name.replace(/\.[^.]+$/, '');
+        dateSet.add(label);
+        mergedByDate[label] = [...(mergedByDate[label] || []), ...tests];
+      }
+    });
+
+    const dateOrder = Array.from(dateSet);
+
+    return {
+      patient,
+      tests: allTests,
+      tests_by_date: mergedByDate,
+      date_order: dateOrder,
+      analysis_complete: true,
+      fileUrl: firstFileUrl,
+      displayUrl: firstDisplayUrl,
+      fileType: firstFileType,
+    };
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
-    if (!validTypes.includes(file.type)) {
-      setError('Please upload a PDF, PNG, JPG, or JPEG file');
+    const invalid = files.find(f => !validTypes.includes(f.type));
+    if (invalid) {
+      setError(`${invalid.name}: only PDF, PNG, JPG files are supported`);
       return;
     }
 
     setUploading(true);
     setError('');
-    setSaved(false); // Reset saved state for new upload
+    setSaved(false);
 
+    const results: any[] = [];
     try {
-      // Create FormData with file and user profile
-      const formData = new FormData();
-      formData.append('file', file);
-      if (user?.profile) {
-        formData.append('user_profile', JSON.stringify(user.profile));
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const isPDF = file.type === 'application/pdf';
+        const prefix = files.length > 1 ? `File ${i + 1}/${files.length}: ` : '';
+        const steps = isPDF
+          ? ['Uploading...', 'Extracting text...', 'Analyzing results...', 'Generating insights...']
+          : ['Uploading...', 'Running OCR...', 'Analyzing results...', 'Generating insights...'];
+
+        let stepIndex = 0;
+        setUploadStatus(`${prefix}${steps[0]}`);
+        const timer = setInterval(() => {
+          stepIndex = Math.min(stepIndex + 1, steps.length - 1);
+          setUploadStatus(`${prefix}${steps[stepIndex]}`);
+        }, 3000);
+
+        try {
+          const result = await uploadSingleFile(file);
+          results.push(result);
+        } finally {
+          clearInterval(timer);
+        }
       }
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/upload${fastMode ? '?fast=true' : ''}`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const result = await response.json();
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      // Use the Cloudinary URL returned by backend for all file types
-      const backendFileUrl = result.fileUrl;
-
-      // For display, prefer Cloudinary URL, fallback to blob URL only for localhost URLs
-      let displayUrl = backendFileUrl;
-      if (backendFileUrl.startsWith('http://localhost') || backendFileUrl.startsWith('blob:')) {
-        displayUrl = URL.createObjectURL(file);
-      }
-
-      // Store the full analysis result for date grouping
-      setAnalysisResult(result);
-
-      // Handle progressive display: basic analysis first, then detailed
-      if (result.basic_analysis && result.detailed_analysis) {
-        // Two-phase analysis: show basic first, then detailed
-        console.log('Two-phase analysis detected');
-        setBasicAnalysis(result.basic_analysis.tests || []);
-        setAnalysisPhase('basic');
-
-        // Show basic results immediately
-        const basicResult = {
-          fileUrl: displayUrl,
-          originalFileUrl: backendFileUrl,
-          patient: result.basic_analysis.patient,
-          tests: result.basic_analysis.tests
-        };
-
-        setUploadedFile({ url: basicResult.fileUrl, originalUrl: basicResult.originalFileUrl, type: file.type });
-        setPatientInfo(basicResult.patient);
-        setExtractedTests(basicResult.tests);
-        setAnalysisPhase('basic');
-
-        // Simulate detailed analysis completion (in real implementation, this would come from streaming)
-        setTimeout(() => {
-          console.log('Detailed analysis ready');
-          const detailedResult = {
-            fileUrl: displayUrl,
-            originalFileUrl: backendFileUrl,
-            patient: result.detailed_analysis.patient || result.basic_analysis.patient,
-            tests: result.detailed_analysis.tests || result.basic_analysis.tests
-          };
-
-          setExtractedTests(detailedResult.tests);
-          setPatientInfo(detailedResult.patient);
-          setAnalysisPhase('detailed');
-        }, 2000); // Simulate delay for detailed analysis
-
-      } else {
-        // Single-phase analysis (fast mode or error fallback)
-        const processedResult = {
-          fileUrl: displayUrl,
-          originalFileUrl: backendFileUrl,
+      // Store each file's result individually for saving
+      setIndividualResults(results.map((result, i) => {
+        const file = files[i];
+        const backendUrl = result.fileUrl || '';
+        return {
+          filename: file.name,
+          fileType: file.type,
+          fileUrl: backendUrl,
           patient: result.patient,
-          tests: result.tests
+          tests: result.tests || [],
         };
+      }));
 
-        setUploadedFile({ url: processedResult.fileUrl, originalUrl: processedResult.originalFileUrl, type: file.type });
-        setPatientInfo(processedResult.patient);
-        setExtractedTests(processedResult.tests);
-        setAnalysisPhase('detailed'); // Mark as complete
-      }
+      // Store all uploaded files for multi-file preview
+      setUploadedFiles(results.map((result, i) => {
+        const file = files[i];
+        const backendUrl = result.fileUrl || '';
+        const displayUrl = backendUrl.startsWith('http://localhost') || backendUrl.startsWith('blob:')
+          ? URL.createObjectURL(file)
+          : backendUrl;
+        return { url: displayUrl, originalUrl: backendUrl, type: file.type, name: file.name };
+      }));
+
+      const merged = mergeResults(results, files);
+      setAnalysisResult(merged);
+      setUploadedFile({ url: merged.displayUrl, originalUrl: merged.fileUrl, type: merged.fileType });
+      setPatientInfo(merged.patient);
+      setExtractedTests(merged.tests);
+      setAnalysisPhase('detailed');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
+      setUploadStatus('');
     }
   };
 
@@ -179,26 +228,36 @@ export default function Dashboard({ onFileUpload, onGoToReports, onGoToGoogleVis
     setSaving(true);
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
-      const response = await fetch(`${backendUrl}/save-report`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          filename: uploadedFile.originalUrl.split('/').pop() || 'report',
-          fileType: uploadedFile.type,
-          fileUrl: uploadedFile.originalUrl,
-          patient: patientInfo,
-          tests: extractedTests,
-        }),
-      });
 
-      const result = await response.json();
-      if (result.success) {
+      // Save each file as a separate report
+      const toSave = individualResults.length > 0 ? individualResults : [{
+        filename: uploadedFile.originalUrl.split('/').pop() || 'report',
+        fileType: uploadedFile.type,
+        fileUrl: uploadedFile.originalUrl,
+        patient: patientInfo,
+        tests: extractedTests,
+      }];
+
+      const saveResults = await Promise.all(toSave.map(r =>
+        fetch(`${backendUrl}/save-report`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            filename: r.filename,
+            fileType: r.fileType,
+            fileUrl: r.fileUrl,
+            patient: r.patient,
+            tests: r.tests,
+          }),
+        }).then(res => res.json())
+      ));
+
+      const failed = saveResults.find(r => !r.success);
+      if (!failed) {
         setSaved(true);
       } else {
-        setError(result.error || 'Failed to save report');
+        setError(failed.error || 'Failed to save one or more reports');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save report');
@@ -268,6 +327,7 @@ export default function Dashboard({ onFileUpload, onGoToReports, onGoToGoogleVis
                 <input
                   type="file"
                   accept=".pdf,.png,.jpg,.jpeg"
+                  multiple
                   onChange={handleFileSelect}
                   disabled={uploading}
                   className="hidden"
@@ -276,7 +336,7 @@ export default function Dashboard({ onFileUpload, onGoToReports, onGoToGoogleVis
                   {uploading ? (
                     <>
                       <Loader2 className="animate-spin w-6 h-6" />
-                      <span>Reading and analyzing your report...</span>
+                      <span>{uploadStatus || 'Analyzing your report...'}</span>
                     </>
                   ) : (
                     <>
@@ -375,6 +435,8 @@ export default function Dashboard({ onFileUpload, onGoToReports, onGoToGoogleVis
             <VoiceAgent
               patientInfo={null}
               extractedTests={[]}
+              userId={user?.id}
+              userProfile={user?.profile}
             />
           </div>
         ) : (
@@ -382,6 +444,7 @@ export default function Dashboard({ onFileUpload, onGoToReports, onGoToGoogleVis
             extractedTests={extractedTests}
             patientInfo={patientInfo}
             uploadedFile={uploadedFile}
+            uploadedFiles={uploadedFiles}
             analysisPhase={analysisPhase}
             basicAnalysis={basicAnalysis}
             analysisResult={analysisResult}
@@ -390,6 +453,8 @@ export default function Dashboard({ onFileUpload, onGoToReports, onGoToGoogleVis
             handleSaveReport={handleSaveReport}
             saving={saving}
             saved={saved}
+            userId={user?.id}
+            userProfile={user?.profile}
           />
         )}
       </main>
