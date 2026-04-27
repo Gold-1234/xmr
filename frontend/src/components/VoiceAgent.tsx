@@ -6,6 +6,7 @@ import {
 } from '@livekit/components-react';
 import { Mic, MessageCircle, Loader2 } from 'lucide-react';
 import '@livekit/components-styles';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Patient {
   name: string | null;
@@ -18,7 +19,7 @@ interface Test {
   value: string;
   unit: string | null;
   reference_range: string | null;
-  interpretation: "Low" | "Normal" | "High" | "Unknown";
+  interpretation: 'Low' | 'Normal' | 'High' | 'Unknown';
   explanation?: string;
   health_summary?: string;
   concerning_findings?: string[];
@@ -31,10 +32,19 @@ interface VoiceAgentProps {
   extractedTests: Test[];
   userId?: string;
   userProfile?: any;
+  standalone?: boolean;
 }
 
-// Main LiveKit Voice Agent Component
-const VoiceAgent: React.FC<VoiceAgentProps> = ({ patientInfo, extractedTests, userId, userProfile }) => {
+const VoiceAgent: React.FC<VoiceAgentProps> = ({
+  patientInfo,
+  extractedTests,
+  userId: userIdProp,
+  userProfile: userProfileProp,
+  standalone = false,
+}) => {
+  const { user } = useAuth();
+  const userId = userIdProp ?? user?.id;
+  const userProfile = userProfileProp ?? user?.profile;
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -47,7 +57,6 @@ const VoiceAgent: React.FC<VoiceAgentProps> = ({ patientInfo, extractedTests, us
     setConnectionError(null);
 
     try {
-      // Backend generates the token AND dispatches the agent to the room
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/livekit-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -85,93 +94,156 @@ const VoiceAgent: React.FC<VoiceAgentProps> = ({ patientInfo, extractedTests, us
     setConnectionError(null);
   };
 
-  if (!isConnected) {
+  const hasContext = patientInfo || extractedTests.length > 0;
+
+  if (standalone) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-6 mt-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center">
-            <MessageCircle className="mr-2 text-blue-600" />
-            LiveKit AI Medical Assistant
-          </h2>
+      <div className="p-6 lg:p-8 max-w-lg mx-auto">
+        <div className="mb-8">
+          <h1 className="page-title">Voice Assistant</h1>
+          <p className="text-muted mt-1">
+            {hasContext
+              ? 'Ask questions about your report results.'
+              : 'Ask a general health question.'}
+          </p>
         </div>
 
-        <div className="text-center space-y-4">
-          <div className="text-gray-600 mb-4">
-            Connect to our LiveKit-powered AI Medical Assistant for real-time voice conversations about your health.
-          </div>
-
-          <button
-            onClick={handleConnect}
-            disabled={isConnecting}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl transition duration-200 inline-flex items-center gap-3 disabled:opacity-50"
-          >
-            {isConnecting ? (
-              <Loader2 className="animate-spin w-6 h-6" />
-            ) : (
-              <Mic className="w-6 h-6" />
-            )}
-            {isConnecting ? 'Connecting...' : 'Connect to LiveKit Assistant'}
-          </button>
-
-          {connectionError && (
-            <div className="text-red-600 text-sm mt-2">
-              {connectionError}
+        {!isConnected ? (
+          <div className="card p-10 flex flex-col items-center gap-6 text-center">
+            <button
+              onClick={handleConnect}
+              disabled={isConnecting}
+              className={`w-28 h-28 rounded-full flex items-center justify-center text-white transition-all duration-300 disabled:cursor-not-allowed
+                ${isConnecting
+                  ? 'bg-navy-800 opacity-70'
+                  : 'bg-navy-800 hover:bg-navy-700 hover:shadow-[0_0_0_12px_rgba(15,23,42,0.08)]'
+                }`}
+            >
+              {isConnecting ? (
+                <Loader2 className="w-10 h-10 animate-spin" />
+              ) : (
+                <Mic className="w-10 h-10" />
+              )}
+            </button>
+            <div>
+              <p className="text-base font-medium text-slate-600">
+                {isConnecting ? 'Connecting…' : 'Tap to connect'}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {hasContext ? 'Ask about your report' : 'Ask a health question'}
+              </p>
             </div>
-          )}
-
-          <div className="text-sm text-gray-500 mt-4">
-            <p>• Real-time voice conversations</p>
-            <p>• WebRTC-powered audio</p>
-            <p>• Medical report analysis</p>
-            <p>• Professional AI responses</p>
+            {connectionError && (
+              <p className="text-sm text-red-600">{connectionError}</p>
+            )}
+            <div className="flex items-center gap-3 text-xs text-slate-400">
+              <span>Real-time voice</span>
+              <span>·</span>
+              <span>WebRTC-powered</span>
+              <span>·</span>
+              <span>Report-aware</span>
+            </div>
           </div>
+        ) : (
+          <div className="card overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                <span className="text-sm font-semibold text-slate-900">Voice Assistant Active</span>
+              </div>
+              <button
+                onClick={handleDisconnect}
+                className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                Disconnect
+              </button>
+            </div>
+            <div className="p-6">
+              <LiveKitRoom
+                token={token || undefined}
+                serverUrl={serverUrl || undefined}
+                connectOptions={{ autoSubscribe: true }}
+                audio={true}
+                video={false}
+              >
+                <RoomAudioRenderer />
+                <VoiceAssistantControlBar />
+              </LiveKitRoom>
+            </div>
+          </div>
+        )}
+
+        <p className="text-xs text-slate-400 mt-4 text-center">
+          Not a substitute for professional medical advice. Always consult a healthcare provider.
+        </p>
+      </div>
+    );
+  }
+
+  // Embedded mode (used inside Report.tsx)
+  if (!isConnected) {
+    return (
+      <div className="card p-5 border border-slate-200">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-lg bg-cyan-50 border border-cyan-200 flex items-center justify-center flex-shrink-0">
+            <MessageCircle className="w-4 h-4 text-cyan-600" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-slate-900">Voice Assistant</div>
+            <div className="text-xs text-slate-500 mt-0.5">Ask questions about your report using voice</div>
+          </div>
+        </div>
+        <button
+          onClick={handleConnect}
+          disabled={isConnecting}
+          className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 active:scale-[0.98] text-white text-sm font-medium py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isConnecting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Mic className="w-4 h-4" />
+          )}
+          {isConnecting ? 'Connecting…' : 'Start Voice Session'}
+        </button>
+        {connectionError && (
+          <p className="text-xs text-red-600 mt-2 text-center">{connectionError}</p>
+        )}
+        <div className="mt-3 flex items-center justify-center gap-3 text-xs text-slate-400">
+          <span>Real-time responses</span>
+          <span>·</span>
+          <span>Report-aware</span>
+          <span>·</span>
+          <span>Multilingual</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 mt-8">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900 flex items-center">
-          <MessageCircle className="mr-2 text-blue-600" />
-          LiveKit AI Medical Assistant
-        </h2>
+    <div className="card overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+          <span className="text-sm font-semibold text-slate-900">Voice Assistant Active</span>
+        </div>
         <button
           onClick={handleDisconnect}
-          className="text-sm text-red-600 hover:text-red-700 underline"
+          className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
         >
           Disconnect
         </button>
       </div>
-
-      {/* LiveKit Room Connection */}
-      <div className="bg-blue-50 rounded-lg p-4">
-        <div className="text-center text-blue-800">
-          <h3 className="font-semibold mb-2">🎙️ LiveKit Voice Agent Active</h3>
-          <p className="text-sm mb-4">
-            Connected to LiveKit room. Agent will respond automatically to voice input.
-          </p>
-          <div className="text-xs text-blue-600">
-            <p>• Real-time voice conversations</p>
-            <p>• Medical AI assistant ready</p>
-            <p>• Auto language detection</p>
-          </div>
-        </div>
-
-        {/* LiveKit Room Component */}
-        <div className="mt-4">
-          <LiveKitRoom
-            token={token || undefined}
-            serverUrl={serverUrl || undefined}
-            connectOptions={{ autoSubscribe: true }}
-            audio={true}
-            video={false}
-          >
-            <RoomAudioRenderer />
-            <VoiceAssistantControlBar />
-          </LiveKitRoom>
-        </div>
+      <div className="p-4">
+        <LiveKitRoom
+          token={token || undefined}
+          serverUrl={serverUrl || undefined}
+          connectOptions={{ autoSubscribe: true }}
+          audio={true}
+          video={false}
+        >
+          <RoomAudioRenderer />
+          <VoiceAssistantControlBar />
+        </LiveKitRoom>
       </div>
     </div>
   );
